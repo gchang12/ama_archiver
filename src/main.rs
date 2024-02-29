@@ -98,5 +98,5 @@ fn compile_ama_index(raw_html: String) -> Vec<AmaRecord> {
 fn main() {
     // TODO: Learn project organization
     // TODO: Write tests
-    // TODO: Reanalyze code
+    // TODO: Reanalyze code to see if the logic works wrt actual tree
 }
