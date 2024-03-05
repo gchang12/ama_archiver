@@ -61,10 +61,8 @@ pub mod ama_indexer {
         //let mut current_node: ElementRef;
         for strong in parsed_html.select(&strong_selector) {
             if strong.inner_html() == FIRST_CC_NAME.to_string() {
-                //current_node = strong;
                 println!("strong: {:?}", strong.inner_html());
                 node_vec.push(strong.parent().unwrap());
-                //kjprintln!("strong.parent: {:?}", ElementRef::wrap(strong.parent().unwrap()).unwrap().inner_html());
                 break;
             }
         }
@@ -78,80 +76,33 @@ pub mod ama_indexer {
         let mut cc_name: String = FIRST_CC_NAME.to_string();
         let mut num_loops: u32 = 0;
         let tolerance: u32 = 100;
-        //println!("{}", current_node.next_siblings().
         for p in current_node.next_siblings() {
-            match p.first_child() {
-                Some(node) => {
-                    let element_ref: ElementRef = ElementRef::wrap(node).unwrap();
-                    match element_ref.value().name() {
-                        "strong" => {
-                            cc_name = element_ref.inner_html();
-                        },
-                        "a" => {
-                            let fan_name: String = element_ref.inner_html();
-                            let url: String = element_ref.attr("href").unwrap().to_string();
-                            let ama_record: AmaRecord = AmaRecord {
-                                cc_name: cc_name.clone(),
-                                fan_name,
-                                url,
-                            };
-                            ama_index.push(ama_record);
-                        },
-                        other => {
-                            eprintln!("Unexpected node found. Neither strong nor a: {:?}", other);
-                            break;
-                        },
-                    }
-                },
-                None => {},
-            }
-            //println!("{:?}", p.first_child().unwrap());
-        };
-        /*
-        loop {
-            match current_node.value().name() {
-                "strong" => {
-                    cc_name = current_node.inner_html();
-                },
-                "a" => {
-                    let fan_name: String = current_node.inner_html();
-                    let url: String = current_node.attr("href").unwrap().to_string();
-                    let ama_record: AmaRecord = AmaRecord {
-                        cc_name: cc_name.clone(),
-                        fan_name,
-                        url,
-                    };
-                    ama_index.push(ama_record);
-                },
-                other => {
-                    //break;
-                    println!("Unexpected node found: '{}'", other);
-                },
-            }
-            // TODO: Inspect this logic. Test function taps out, says it cannot unwrap
-            // "first_child" return value. Also, return values don't match. Panics before the
-            // first loop. Code is impossible to understand. .parent method does not do as
-            // expected. It does not return the <p> node that parents the <strong>
-            println!("cc_name: {}", cc_name);
-            //println!("test: {:?}", ElementRef::wrap( current_node.parent().unwrap() ));
-            current_node = ElementRef::wrap(
-                match current_node.parent().unwrap().next_sibling() {
-                    Some(node) => node,
-                    None => {
-                        println!("Done compiling entries.");
+            if let Some(node) = p.first_child() {
+                let element_ref: ElementRef = ElementRef::wrap(node).unwrap();
+                match element_ref.value().name() {
+                    "strong" => {
+                        cc_name = element_ref.inner_html();
+                    },
+                    "a" => {
+                        let fan_name: String = element_ref.inner_html();
+                        let url: String = element_ref.attr("href").unwrap().to_string();
+                        let ama_record: AmaRecord = AmaRecord {
+                            cc_name: cc_name.clone(),
+                            fan_name,
+                            url,
+                        };
+                        ama_index.push(ama_record);
+                    },
+                    other => {
+                        eprintln!("Unexpected node found. Neither strong nor a: {:?}", other);
                         break;
-                    }
-                }.first_child().unwrap()
-            ).unwrap();
-            num_loops += 1;
-            if num_loops == tolerance {
-                panic!("Max number of iterations of {} exceeded. Aborting.", tolerance);
-                //break;
+                    },
+                }
             }
-        }
-        */
+        };
         ama_index
     }
+
 }
 
 #[cfg(test)]
