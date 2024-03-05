@@ -11,6 +11,7 @@
 
 pub mod ama_indexer {
     use ureq;
+    use ego_tree::NodeRef;
     use std::fs;
     use scraper::{Html, Selector, ElementRef};
 
@@ -55,12 +56,14 @@ pub mod ama_indexer {
         // locate the starting node
         let parsed_html: Html = Html::parse_document(&raw_html);
         let strong_selector: Selector = Selector::parse("strong").unwrap();
-        let mut node_vec: Vec<ElementRef> = Vec::new(); // used to store the 'current_node'
+        let mut node_vec: Vec<_> = Vec::new(); // used to store the 'current_node'
         //let mut current_node: ElementRef;
         for strong in parsed_html.select(&strong_selector) {
             if strong.inner_html() == FIRST_CC_NAME.to_string() {
                 //current_node = strong;
-                node_vec.push(strong);
+                println!("strong: {:?}", strong.inner_html());
+                node_vec.push(strong.parent().unwrap());
+                //kjprintln!("strong.parent: {:?}", ElementRef::wrap(strong.parent().unwrap()).unwrap().inner_html());
                 break;
             }
         }
@@ -74,6 +77,15 @@ pub mod ama_indexer {
         let mut cc_name: String = String::new();
         let mut num_loops: u32 = 0;
         let tolerance: u32 = 100;
+        //println!("{}", current_node.next_siblings().
+        for p in current_node.next_siblings() {
+            match p.first_child() {
+                Some(node) => println!("{:?}", ElementRef::wrap(node).unwrap().html()),
+                None => {},
+            }
+            //println!("{:?}", p.first_child().unwrap());
+        };
+        /*
         loop {
             match current_node.value().name() {
                 "strong" => {
@@ -94,6 +106,12 @@ pub mod ama_indexer {
                     println!("Unexpected node found: '{}'", other);
                 },
             }
+            // TODO: Inspect this logic. Test function taps out, says it cannot unwrap
+            // "first_child" return value. Also, return values don't match. Panics before the
+            // first loop. Code is impossible to understand. .parent method does not do as
+            // expected. It does not return the <p> node that parents the <strong>
+            println!("cc_name: {}", cc_name);
+            //println!("test: {:?}", ElementRef::wrap( current_node.parent().unwrap() ));
             current_node = ElementRef::wrap(
                 match current_node.parent().unwrap().next_sibling() {
                     Some(node) => node,
@@ -109,6 +127,7 @@ pub mod ama_indexer {
                 //break;
             }
         }
+        */
         ama_index
     }
 }
