@@ -20,6 +20,7 @@ pub mod ama_indexer {
     pub const ODIR_NAME: &str = "output";
     const FIRST_CC_NAME: &str = "Daron Nefcy:";
 
+    #[derive(Debug)]
     pub struct AmaRecord {
         cc_name: String, // ElementRef::inner_html
         fan_name: String, // ElementRef::inner_html
@@ -74,13 +75,34 @@ pub mod ama_indexer {
         drop(node_vec);
         // begin to compile records
         let mut ama_index: Vec<AmaRecord> = Vec::new();
-        let mut cc_name: String = String::new();
+        let mut cc_name: String = FIRST_CC_NAME.to_string();
         let mut num_loops: u32 = 0;
         let tolerance: u32 = 100;
         //println!("{}", current_node.next_siblings().
         for p in current_node.next_siblings() {
             match p.first_child() {
-                Some(node) => println!("{:?}", ElementRef::wrap(node).unwrap().html()),
+                Some(node) => {
+                    let element_ref: ElementRef = ElementRef::wrap(node).unwrap();
+                    match element_ref.value().name() {
+                        "strong" => {
+                            cc_name = element_ref.inner_html();
+                        },
+                        "a" => {
+                            let fan_name: String = element_ref.inner_html();
+                            let url: String = element_ref.attr("href").unwrap().to_string();
+                            let ama_record: AmaRecord = AmaRecord {
+                                cc_name: cc_name.clone(),
+                                fan_name,
+                                url,
+                            };
+                            ama_index.push(ama_record);
+                        },
+                        other => {
+                            eprintln!("Unexpected node found. Neither strong nor a: {:?}", other);
+                            break;
+                        },
+                    }
+                },
                 None => {},
             }
             //println!("{:?}", p.first_child().unwrap());
