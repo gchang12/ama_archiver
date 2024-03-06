@@ -39,28 +39,28 @@ pub mod ama_indexer {
         raw_html
     }
 
-    pub fn save_raw_index(raw_html: String) -> () {
+    pub fn save_raw_index(raw_html: String, odir_name: &str, lc_fname: &str) -> () {
         // create 'output' directory
         // save 'raw_html' to {ODIR_NAME}/{LC_FNAME}.html
-        let () = match fs::create_dir(ODIR_NAME) {
-            Ok(()) => println!("'{}' directory successfully created.", ODIR_NAME),
-            Err(_) => eprintln!("Error creating '{}' directory. Does it exist already?", ODIR_NAME),
+        let () = match fs::create_dir(odir_name) {
+            Ok(()) => println!("'{}' directory successfully created.", odir_name),
+            Err(_) => eprintln!("Error creating '{}' directory. Does it exist already?", odir_name),
         };
-        let full_opath: String = format!("{}/{}.html", ODIR_NAME, LC_FNAME);
+        let full_opath: String = format!("{}/{}.html", odir_name, lc_fname);
         let () = match fs::write(&full_opath, raw_html) {
             Ok(()) => println!("Contents of (raw_html, String) written to '{}'", full_opath),
             Err(_) => eprintln!("Unable to write (raw_html, String) to '{}'", full_opath),
         };
     }
 
-    pub fn compile_ama_index(raw_html: String) -> Vec<AmaRecord> {
+    pub fn compile_ama_index(raw_html: String, start_text: &str) -> Vec<AmaRecord> {
         // locate the starting node
         let parsed_html: Html = Html::parse_document(&raw_html);
         let strong_selector: Selector = Selector::parse("strong").unwrap();
         let mut node_vec: Vec<_> = Vec::new(); // used to store the 'current_node'
         //let mut current_node: ElementRef;
         for strong in parsed_html.select(&strong_selector) {
-            if strong.inner_html() == FIRST_CC_NAME.to_string() {
+            if strong.inner_html() == start_text.to_string() {
                 println!("strong: {:?}", strong.inner_html());
                 node_vec.push(strong.parent().unwrap());
                 break;
@@ -68,12 +68,12 @@ pub mod ama_indexer {
         }
         let mut current_node = match node_vec.pop() {
             Some(node) => node,
-            None => panic!("<strong> node that contains '{}' not found. Fatal. Aborting.", FIRST_CC_NAME),
+            None => panic!("<strong> node that contains '{}' not found. Fatal. Aborting.", start_text),
         };
         drop(node_vec);
         // begin to compile records
         let mut ama_index: Vec<AmaRecord> = Vec::new();
-        let mut cc_name: String = FIRST_CC_NAME.to_string();
+        let mut cc_name: String = start_text.to_string();
         let mut num_loops: u32 = 0;
         let tolerance: u32 = 100;
         for p in current_node.next_siblings() {
@@ -82,6 +82,12 @@ pub mod ama_indexer {
                 match element_ref.value().name() {
                     "strong" => {
                         cc_name = element_ref.inner_html();
+                        assert_eq!(
+                            match cc_name.pop() {
+                                Some(colon) => colon,
+                                None => panic!("<strong> tag was empty. Inspect."),
+                            },
+                        ':');
                     },
                     "a" => {
                         let fan_name: String = element_ref.inner_html();
@@ -89,6 +95,7 @@ pub mod ama_indexer {
                         let ama_record: AmaRecord = AmaRecord {
                             cc_name: cc_name.clone(),
                             fan_name,
+                            // TODO: Create function to find URL template, and isolate the url_id
                             url,
                         };
                         ama_index.push(ama_record);

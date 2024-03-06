@@ -25,6 +25,7 @@ dependencies = [
 name = "ama_archiver"
 version = "0.1.0"
 dependencies = [
+ "ego-tree",
  "scraper",
  "ureq",
 ]
