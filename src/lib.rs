@@ -19,6 +19,7 @@ pub mod ama_indexer {
     pub const LC_FNAME: &str = "link-compendium";
     pub const ODIR_NAME: &str = "output";
     const FIRST_CC_NAME: &str = "Daron Nefcy:";
+    const URL_TEMPLATE: &str = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
 
     #[derive(Debug)]
     pub struct AmaRecord {
@@ -110,7 +111,7 @@ pub mod ama_indexer {
         ama_index
     }
 
-    fn identify_duplicates(ama_index: Vec<AmaRecord>) {
+    fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) {
     }
 
     fn save_ama_index(ama_index: Vec<AmaRecord>) {
@@ -120,9 +121,22 @@ pub mod ama_indexer {
     }
 
     fn get_url(url_id: String) {
+        // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
+        let mut url_parts: Vec<String> = URL_TEMPLATE.split("/").collect();
+        url_parts[-2] = url_id;
+        // 0: 'https:'
+        // 1: ''
+        // 2: 'www.reddit.com'
+        url_parts[2] = "old.reddit.com".to_string();
+        let url: String = url_parts.join("/");
+        url
     }
 
     fn get_urlid(url: String) {
+        // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
+        let url_parts: Vec<String> = URL_TEMPLATE.split("/").collect();
+        let url_id: String = url_parts[-2];
+        url_id
     }
 
 }
