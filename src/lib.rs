@@ -110,6 +110,21 @@ pub mod ama_indexer {
         ama_index
     }
 
+    fn identify_duplicates(ama_index: Vec<AmaRecord>) {
+    }
+
+    fn save_ama_index(ama_index: Vec<AmaRecord>) {
+    }
+
+    fn load_ama_index(full_dbpath: !) {
+    }
+
+    fn get_url(url_id: String) {
+    }
+
+    fn get_urlid(url: String) {
+    }
+
 }
 
 #[cfg(test)]
