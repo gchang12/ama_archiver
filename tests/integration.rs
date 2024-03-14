@@ -4,6 +4,6 @@ mod integration {
     #[test]
     fn test_fetch_and_save_index() {
         let raw_html: String = ama_indexer::fetch_raw_index();
-        let () = ama_indexer::save_raw_index(raw_html);
+        let () = ama_indexer::save_raw_index(raw_html, "output", "link-compendium");
     }
 }

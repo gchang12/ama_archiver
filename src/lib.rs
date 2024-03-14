@@ -57,20 +57,20 @@ pub mod ama_indexer {
         // locate the starting node
         let parsed_html: Html = Html::parse_document(&raw_html);
         let strong_selector: Selector = Selector::parse("strong").unwrap();
-        let mut node_vec: Vec<_> = Vec::new(); // used to store the 'current_node'
+        let mut node_opt: Option<NodeRef<_>> = None; // used to store the 'current_node'
         //let mut current_node: ElementRef;
         for strong in parsed_html.select(&strong_selector) {
             if strong.inner_html() == start_text.to_string() {
                 println!("strong: {:?}", strong.inner_html());
-                node_vec.push(strong.parent().unwrap());
+                node_opt = Some(strong.parent().unwrap());
                 break;
             }
         }
-        let mut current_node = match node_vec.pop() {
+        let mut current_node = match node_opt {
             Some(node) => node,
             None => panic!("<strong> node that contains '{}' not found. Fatal. Aborting.", start_text),
         };
-        drop(node_vec);
+        // drop(node_opt); // warned against this.
         // begin to compile records
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         let mut cc_name: String = start_text.to_string();
@@ -134,6 +134,7 @@ mod ama_indexer_tests {
     fn test_compile_ama_index() {
         let full_opath: String = format!("{}/{}.html", ama_indexer::ODIR_NAME, ama_indexer::LC_FNAME);
         let raw_index: String = fs::read_to_string(full_opath).unwrap();
-        let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index);
+        let start_text: &str = "Daron Nefcy:";
+        let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index, start_text);
     }
 }
