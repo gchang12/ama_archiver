@@ -19,7 +19,7 @@ pub mod ama_indexer {
     pub const LC_FNAME: &str = "link-compendium";
     pub const ODIR_NAME: &str = "output";
     const FIRST_CC_NAME: &str = "Daron Nefcy:";
-    const URL_TEMPLATE: &str = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
+    const URL_TEMPLATE: &str = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
 
     #[derive(Debug)]
     pub struct AmaRecord {
@@ -111,46 +111,79 @@ pub mod ama_indexer {
         ama_index
     }
 
-    fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) {
+    /*
+    fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) -> Vec<AmaRecord> {
+        let mut urlid_list: Vec<String> = Vec::new();
+        let mut dup_list: Vec<AmaRecord> = Vec::new();
+        for ama_record in (*ama_index_ref).iter() {
+            if let true = urlid_list.contains(&ama_record.url) {
+                dup_list.push(*ama_record);
+            }
+        }
+        for dup in dup_list.iter() {
+            eprintln!("{:?}", dup);
+        }
+        dup_list
     }
 
     fn save_ama_index(ama_index: Vec<AmaRecord>) {
+        // TODO: Learn rusqlite module first.
     }
 
     fn load_ama_index(full_dbpath: !) {
+        // TODO: Learn std::path module first.
     }
+    */
 
-    fn get_url(url_id: String) {
+    pub fn get_url(url_id: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
-        let mut url_parts: Vec<String> = URL_TEMPLATE.split("/").collect();
-        url_parts[-2] = url_id;
+        let mut url_parts: Vec<&str> = URL_TEMPLATE.to_string().split("/").collect();
+        url_parts[url_parts.len() - 2] = url_id.as_str();
         // 0: 'https:'
         // 1: ''
         // 2: 'www.reddit.com'
-        url_parts[2] = "old.reddit.com".to_string();
+        url_parts[2] = "old.reddit.com";
         let url: String = url_parts.join("/");
         url
     }
 
-    fn get_urlid(url: String) {
+    pub fn get_urlid(url: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
-        let url_parts: Vec<String> = URL_TEMPLATE.split("/").collect();
-        let url_id: String = url_parts[-2];
+        let url_parts: Vec<&str> = url.split("/").collect();
+        let url_id: String = url_parts[url_parts.len() - 2].to_string();
         url_id
     }
 
 }
 
+// TODO: Learn how to write better tests.
+// TODO: Learn how to structure the project better.
 #[cfg(test)]
 mod ama_indexer_tests {
     use crate::ama_indexer;
     use std::fs;
 
+    #[test]
+    fn test_get_url() {
+        let url_id: String = "nyet".to_string();
+        let expected: String = format!("{}/{}/{}", "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything", url_id, "?context=3");
+        let actual: String = ama_indexer::get_url(url_id);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_get_urlid() {
+        let expected: String = "nyet".to_string();
+        let url: String = format!("{}/{}/{}", "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything", expected, "?context=3");
+        let actual: String = ama_indexer::get_urlid(url);
+        assert_eq!(actual, expected);
+    }
+
     //#[test]
     fn test_fetch_raw_index() {
         /*
         let raw_index: String = ama_indexer::fetch_raw_index();
-        // TODO: Figure out how to show output
+        // TODO: Figure out how to show output. `--nocapture` option
         let () = match fs::write("test_fetch_raw_index__results.html", raw_index) {
             Ok(_) => {},
             Err(_) => {},
