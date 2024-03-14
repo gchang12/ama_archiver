@@ -28,11 +28,11 @@ pub mod ama_indexer {
         url: String, // (ElementRef::attr).to_string()
     }
 
-    pub fn fetch_raw_index() -> String {
+    pub fn fetch_raw_index(url: String) -> String {
         // use ureq to get text of LC_URL
         // save text into html file in output
         // ensure output/ exists beforehand
-        let request: ureq::Request = ureq::get(LC_URL);
+        let request: ureq::Request = ureq::get(url);
         let raw_html: String = match request.call() {
             Ok(resp) => resp.into_string().unwrap(),
             Err(reqerr) => panic!("Unable to get response from '{}': {:?}", LC_URL, reqerr),
@@ -67,7 +67,7 @@ pub mod ama_indexer {
                 break;
             }
         }
-        let mut current_node = match node_opt {
+        let current_node = match node_opt {
             Some(node) => node,
             None => panic!("<strong> node that contains '{}' not found. Fatal. Aborting.", start_text),
         };
@@ -75,8 +75,6 @@ pub mod ama_indexer {
         // begin to compile records
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         let mut cc_name: String = start_text.to_string();
-        let mut num_loops: u32 = 0;
-        let tolerance: u32 = 100;
         for p in current_node.next_siblings() {
             if let Some(node) = p.first_child() {
                 let element_ref: ElementRef = ElementRef::wrap(node).unwrap();
@@ -96,7 +94,6 @@ pub mod ama_indexer {
                         let ama_record: AmaRecord = AmaRecord {
                             cc_name: cc_name.clone(),
                             fan_name,
-                            // TODO: Create function to find URL template, and isolate the url_id
                             url,
                         };
                         ama_index.push(ama_record);
@@ -137,8 +134,10 @@ pub mod ama_indexer {
 
     pub fn get_url(url_id: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
-        let mut url_parts: Vec<&str> = URL_TEMPLATE.to_string().split("/").collect();
-        url_parts[url_parts.len() - 2] = url_id.as_str();
+        let url_template: String = URL_TEMPLATE.to_string();
+        let mut url_parts: Vec<&str> = url_template.split("/").collect();
+        let urlid_loc: usize = url_parts.len() - 2;
+        url_parts[urlid_loc] = url_id.as_str();
         // 0: 'https:'
         // 1: ''
         // 2: 'www.reddit.com'
@@ -150,7 +149,8 @@ pub mod ama_indexer {
     pub fn get_urlid(url: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
         let url_parts: Vec<&str> = url.split("/").collect();
-        let url_id: String = url_parts[url_parts.len() - 2].to_string();
+        let urlid_loc: usize = url_parts.len() - 2;
+        let url_id: String = url_parts[urlid_loc].to_string();
         url_id
     }
 
@@ -166,7 +166,7 @@ mod ama_indexer_tests {
     #[test]
     fn test_get_url() {
         let url_id: String = "nyet".to_string();
-        let expected: String = format!("{}/{}/{}", "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything", url_id, "?context=3");
+        let expected: String = format!("{}/{}/{}", "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything", url_id, "?context=3");
         let actual: String = ama_indexer::get_url(url_id);
         assert_eq!(actual, expected);
     }
@@ -179,17 +179,11 @@ mod ama_indexer_tests {
         assert_eq!(actual, expected);
     }
 
-    //#[test]
+    #[test]
     fn test_fetch_raw_index() {
-        /*
-        let raw_index: String = ama_indexer::fetch_raw_index();
-        // TODO: Figure out how to show output. `--nocapture` option
-        let () = match fs::write("test_fetch_raw_index__results.html", raw_index) {
-            Ok(_) => {},
-            Err(_) => {},
-        };
-        //println!("{}", raw_index); // cargo test does not print to stdout
-        */
+        let url: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
+        let raw_index: String = ama_indexer::fetch_raw_index(url.to_string());
+        // Few tests to check that it contains some keywords.
     }
 
     #[test]
@@ -199,4 +193,5 @@ mod ama_indexer_tests {
         let start_text: &str = "Daron Nefcy:";
         let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index, start_text);
     }
+
 }
