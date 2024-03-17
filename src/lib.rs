@@ -161,7 +161,22 @@ mod ama_indexer {
         let mut stmt: rusqlite::Statement = cnxn.prepare(
             "SELECT url_id, cc_name, fan_name FROM ama_index;"
             ).unwrap();
-        // TODO: Figure out how to load rows in from SQL database.
+        let ama_record_iter = stmt.query_map(
+            [],
+            |row| {
+                Ok(
+                    AmaRecord {
+                    url_id: row.get(0).unwrap(),
+                    cc_name: row.get(1).unwrap(),
+                    fan_name: row.get(2).unwrap(),
+                    }
+                )
+            }
+        ).unwrap();
+        for ama_record in ama_record_iter {
+            ama_index.push(ama_record);
+        };
+        ama_index
     }
 
     pub fn get_url(url_id: String) -> String {
@@ -297,6 +312,96 @@ mod ama_indexer_tests {
         let actual: String = fs::read_to_string(format!("{}/{}.html", odir_name, lc_fname)).unwrap();
         let expected: String = raw_index.to_string();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_save_ama_index() {
+        let ama_index: Vec<AmaRecord> = get_ama_index();
+        let full_dbpath: = "output/ama_index-save_test.db";
+        // if full_dbpath.exists(): rm full_dbpath
+        let save_result: Result<usize> = ama_indexer::save_ama_index(ama_index);
+        // fetch saved database if successful.
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        let mut stmt: rusqlite::Statement = cnxn.prepare(
+            "SELECT url_id, cc_name, fan_name FROM ama_index;"
+            ).unwrap();
+        let ama_record_iter = stmt.query_map(
+            [],
+            |row| {
+                Ok(
+                    AmaRecord {
+                    url_id: row.get(0).unwrap(),
+                    cc_name: row.get(1).unwrap(),
+                    fan_name: row.get(2).unwrap(),
+                    }
+                )
+            }
+        ).unwrap();
+        let mut ama_index: Vec<AmaRecord = Vec::new();
+        for ama_record in ama_record_iter {
+            ama_index.push(ama_record);
+        };
+        // How to compare original and expected, when the former is moved?
+    }
+
+    #[test]
+    fn test_load_ama_index() {
+        let full_dbpath: &str = "output/ama_index-load_test.db";
+        let expected: Vec<AmaRecord> = get_ama_index();
+        // Insert into table, then test load.
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        cnxn.execute(
+            "CREATE TABLE ama_index(
+                url_id TEXT,
+                cc_name TEXT,
+                fan_name TEXT,
+            );"
+        ).unwrap();
+        // Begin data dump here.
+        for ama_record in ama_index {
+            cnxn.execute(
+                "INSERT INTO ama_index(
+                    url_id,
+                    cc_name,
+                    fan_name,
+                    ) VALUES (?1, ?2, ?3);",
+                (
+                    ama_record.url_id,
+                    ama_record.cc_name,
+                    ama_record.fan_name,
+                )
+            ).unwrap();
+        };
+        let actual: Vec<AmaRecord> = ama_indexer::load_ama_index(full_dbpath);
+        // Assert actual == expected
+        /*
+        full_dbpath = self.odir_path.joinpath("ama_index-load_test.db")
+        if full_dbpath.exists():
+            full_dbpath.unlink()
+        expected = self.ama_index.copy()
+        for record in expected:
+            record['url_id'] = record.pop("url")
+        with sqlite3.connect(full_dbpath) as cnxn:
+            crs = cnxn.execute("""
+                CREATE TABLE ama_index(
+                    cc_name TEXT NOT NULL,
+                    fan_name TEXT NOT NULL,
+                    url_id TEXT NOT NULL
+                );
+                """)
+            crs.executemany("INSERT INTO ama_index VALUES(:cc_name, :fan_name, :url_id);", expected)
+        actual = indexer.load_ama_index(full_dbpath)
+        full_dbpath.unlink()
+        def original_order(element):
+            """
+            Function to sort dict-list by order in original self.ama_index.
+
+            Assume: All entries in actual are contained in self.ama_index.
+            """
+            return self.ama_index.index(element)
+        actual.sort(key=original_order)
+        self.assertListEqual(actual, expected)
+        */
     }
 
     /*
