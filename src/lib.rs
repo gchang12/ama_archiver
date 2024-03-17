@@ -9,7 +9,7 @@
  * <p><a href="...">fan name</a></p>
 */
 
-pub mod ama_indexer {
+mod ama_indexer {
     use ureq;
     use ego_tree::NodeRef;
     use std::fs;
@@ -21,18 +21,19 @@ pub mod ama_indexer {
     const FIRST_CC_NAME: &str = "Daron Nefcy:";
     const URL_TEMPLATE: &str = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
 
+    #[derive(PartialEq)] // TODO: Search this up.
     #[derive(Debug)]
     pub struct AmaRecord {
-        cc_name: String, // ElementRef::inner_html
-        fan_name: String, // ElementRef::inner_html
-        url: String, // (ElementRef::attr).to_string()
+        pub cc_name: String, // ElementRef::inner_html
+        pub fan_name: String, // ElementRef::inner_html
+        pub url: String, // (ElementRef::attr).to_string()
     }
 
     pub fn fetch_raw_index(url: String) -> String {
         // use ureq to get text of LC_URL
         // save text into html file in output
         // ensure output/ exists beforehand
-        let request: ureq::Request = ureq::get(url);
+        let request: ureq::Request = ureq::get(&url);
         let raw_html: String = match request.call() {
             Ok(resp) => resp.into_string().unwrap(),
             Err(reqerr) => panic!("Unable to get response from '{}': {:?}", LC_URL, reqerr),
@@ -75,6 +76,12 @@ pub mod ama_indexer {
         // begin to compile records
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         let mut cc_name: String = start_text.to_string();
+        assert_eq!(
+            match cc_name.pop() {
+                Some(colon) => colon,
+                None => panic!("<strong> tag was empty. Inspect."),
+            },
+        ':');
         for p in current_node.next_siblings() {
             if let Some(node) = p.first_child() {
                 let element_ref: ElementRef = ElementRef::wrap(node).unwrap();
@@ -184,14 +191,84 @@ mod ama_indexer_tests {
         let url: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
         let raw_index: String = ama_indexer::fetch_raw_index(url.to_string());
         // Few tests to check that it contains some keywords.
+        let keywords: Vec<&str> = Vec::from(
+            [
+                "</html>",
+                "Daron Nefcy",
+                "Dominic",
+                "Hammersley",
+                "VeronicaMewniFan",
+            ]
+        );
+        for kw in keywords {
+            assert!(raw_index.contains(kw));
+        }
     }
 
     #[test]
     fn test_compile_ama_index() {
-        let full_opath: String = format!("{}/{}.html", ama_indexer::ODIR_NAME, ama_indexer::LC_FNAME);
-        let raw_index: String = fs::read_to_string(full_opath).unwrap();
-        let start_text: &str = "Daron Nefcy:";
-        let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index, start_text);
+        // Decided not to rely on fetched data for test.
+        // let full_opath: String = format!("{}/{}.html", ama_indexer::ODIR_NAME, ama_indexer::LC_FNAME);
+        /*fs::read_to_string(full_opath).unwrap();*/
+        let index_tup: Vec<(&str, &str, &str)> = Vec::from(
+            [
+                ("cc_name1", "fan_name1", "1"),
+                ("cc_name1", "fan_name2", "2"),
+                ("cc_name1", "fan_name3", "1"),
+                ("cc_name2", "fan_name4", "3"),
+                ("cc_name2", "fan_name5", "4"),
+            ]
+        );
+        let mut expected: Vec<ama_indexer::AmaRecord> = Vec::new();
+        for tup in index_tup.into_iter().map(|field_tup| {
+            let (cc_name, fan_name, url): (&str, &str, &str) = field_tup;
+            (cc_name.to_string(), fan_name.to_string(), url.to_string())
+        }
+        ) {
+            let (cc_name, fan_name, url): (String, String, String) = tup;
+            let ama_record = ama_indexer::AmaRecord {
+                cc_name,
+                fan_name,
+                url,
+            };
+            expected.push(ama_record);
+        };
+        let start_text: &str = "cc_name1:";
+        let raw_index: &str = r#"
+            <p><strong>cc_name1:</strong></p>
+
+            <p><a href="1">fan_name1</a></p>
+            <p><a href="2">fan_name2</a></p>
+            <p><a href="1">fan_name3</a></p>
+            <hr />
+            <p><strong>cc_name2:</strong></p>
+            <p><a href="3">fan_name4</a></p>
+            <p><a href="4">fan_name5</a></p>
+        "#;
+        let actual: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index.to_string(), start_text);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_save_raw_index() {
+        let raw_index: &str = r#"
+            <p><strong>cc_name1:</strong></p>
+
+            <p><a href="1">fan_name1</a></p>
+            <p><a href="2">fan_name2</a></p>
+            <p><a href="1">fan_name3</a></p>
+            <hr />
+            <p><strong>cc_name2:</strong></p>
+            <p><a href="3">fan_name4</a></p>
+            <p><a href="4">fan_name5</a></p>
+        "#;
+        let odir_name: &str = ama_indexer::ODIR_NAME;
+        let lc_fname: &str = "raw_index";
+        // Assert that saved text is the same as the loaded text.
+        let () = ama_indexer::save_raw_index(raw_index.to_string(), odir_name, lc_fname);
+        let actual: String = fs::read_to_string(format!("{}/{}.html", odir_name, lc_fname)).unwrap();
+        let expected: String = raw_index.to_string();
+        assert_eq!(expected, actual);
     }
 
 }
