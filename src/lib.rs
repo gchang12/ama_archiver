@@ -26,14 +26,14 @@ mod ama_indexer {
     pub struct AmaRecord {
         pub cc_name: String, // ElementRef::inner_html
         pub fan_name: String, // ElementRef::inner_html
-        pub url: String, // (ElementRef::attr).to_string()
+        pub url_id: String, // (ElementRef::attr).to_string()
     }
 
-    pub fn fetch_raw_index(url: String) -> String {
+    pub fn fetch_raw_index(url: &str) -> String {
         // use ureq to get text of LC_URL
         // save text into html file in output
         // ensure output/ exists beforehand
-        let request: ureq::Request = ureq::get(&url);
+        let request: ureq::Request = ureq::get(url);
         let raw_html: String = match request.call() {
             Ok(resp) => resp.into_string().unwrap(),
             Err(reqerr) => panic!("Unable to get response from '{}': {:?}", LC_URL, reqerr),
@@ -97,11 +97,11 @@ mod ama_indexer {
                     },
                     "a" => {
                         let fan_name: String = element_ref.inner_html();
-                        let url: String = element_ref.attr("href").unwrap().to_string();
+                        let url_id: String = element_ref.attr("href").unwrap().to_string();
                         let ama_record: AmaRecord = AmaRecord {
                             cc_name: cc_name.clone(),
                             fan_name,
-                            url,
+                            url_id,
                         };
                         ama_index.push(ama_record);
                     },
@@ -115,12 +115,12 @@ mod ama_indexer {
         ama_index
     }
 
-    /*
+
     fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) -> Vec<AmaRecord> {
         let mut urlid_list: Vec<String> = Vec::new();
         let mut dup_list: Vec<AmaRecord> = Vec::new();
         for ama_record in (*ama_index_ref).iter() {
-            if let true = urlid_list.contains(&ama_record.url) {
+            if let true = urlid_list.contains(*ama_record.url_id) {
                 dup_list.push(*ama_record);
             }
         }
@@ -128,8 +128,8 @@ mod ama_indexer {
             eprintln!("{:?}", dup);
         }
         dup_list
-    }
 
+    /*
     fn save_ama_index(ama_index: Vec<AmaRecord>) {
         // TODO: Learn rusqlite module first.
     }
@@ -189,7 +189,7 @@ mod ama_indexer_tests {
     #[test]
     fn test_fetch_raw_index() {
         let url: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
-        let raw_index: String = ama_indexer::fetch_raw_index(url.to_string());
+        let raw_index: String = ama_indexer::fetch_raw_index(url);
         // Few tests to check that it contains some keywords.
         let keywords: Vec<&str> = Vec::from(
             [
@@ -221,15 +221,15 @@ mod ama_indexer_tests {
         );
         let mut expected: Vec<ama_indexer::AmaRecord> = Vec::new();
         for tup in index_tup.into_iter().map(|field_tup| {
-            let (cc_name, fan_name, url): (&str, &str, &str) = field_tup;
-            (cc_name.to_string(), fan_name.to_string(), url.to_string())
+            let (cc_name, fan_name, url_id): (&str, &str, &str) = field_tup;
+            (cc_name.to_string(), fan_name.to_string(), url_id.to_string())
         }
         ) {
-            let (cc_name, fan_name, url): (String, String, String) = tup;
+            let (cc_name, fan_name, url_id): (String, String, String) = tup;
             let ama_record = ama_indexer::AmaRecord {
                 cc_name,
                 fan_name,
-                url,
+                url_id,
             };
             expected.push(ama_record);
         };
@@ -263,12 +263,16 @@ mod ama_indexer_tests {
             <p><a href="4">fan_name5</a></p>
         "#;
         let odir_name: &str = ama_indexer::ODIR_NAME;
-        let lc_fname: &str = "raw_index";
+        let lc_fname: &str = "test_save_raw_index-output";
         // Assert that saved text is the same as the loaded text.
         let () = ama_indexer::save_raw_index(raw_index.to_string(), odir_name, lc_fname);
         let actual: String = fs::read_to_string(format!("{}/{}.html", odir_name, lc_fname)).unwrap();
         let expected: String = raw_index.to_string();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_identify_duplicates() {
     }
 
 }
