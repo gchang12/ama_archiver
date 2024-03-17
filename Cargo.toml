@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 ego-tree = "0.6.2"
+rusqlite = "0.31.0"
 scraper = "0.18.1"
 ureq = "2.9.6"

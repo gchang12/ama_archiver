@@ -14,6 +14,7 @@ mod ama_indexer {
     use ego_tree::NodeRef;
     use std::fs;
     use scraper::{Html, Selector, ElementRef};
+    use rusqlite;
 
     const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
     pub const LC_FNAME: &str = "link-compendium";
@@ -21,7 +22,7 @@ mod ama_indexer {
     const FIRST_CC_NAME: &str = "Daron Nefcy:";
     const URL_TEMPLATE: &str = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
 
-    #[derive(PartialEq)] // TODO: Search this up.
+    #[derive(PartialEq)]
     #[derive(Debug)]
     pub struct AmaRecord {
         pub cc_name: String, // ElementRef::inner_html
@@ -115,29 +116,53 @@ mod ama_indexer {
         ama_index
     }
 
-
-    fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) -> Vec<AmaRecord> {
+    /*
+    fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) -> () {
+        // #sqlite> SELECT * FROM ama_index WHERE url_id IN (SELECT url_id FROM ama_index GROUP BY url_id HAVING COUNT(url_id) > 1);
         let mut urlid_list: Vec<String> = Vec::new();
         let mut dup_list: Vec<AmaRecord> = Vec::new();
-        for ama_record in (*ama_index_ref).iter() {
-            if let true = urlid_list.contains(*ama_record.url_id) {
-                dup_list.push(*ama_record);
+        for ama_record_ref in (*ama_index_ref).iter() {
+            if let true = urlid_list.contains(&((*ama_record_ref).url_id)) {
+                eprintln!("{:?}", *ama_record_refj);
             }
-        }
-        for dup in dup_list.iter() {
-            eprintln!("{:?}", dup);
-        }
-        dup_list
-
-    /*
-    fn save_ama_index(ama_index: Vec<AmaRecord>) {
-        // TODO: Learn rusqlite module first.
-    }
-
-    fn load_ama_index(full_dbpath: !) {
-        // TODO: Learn std::path module first.
+        };
     }
     */
+
+    fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> Result<usize> {
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        cnxn.execute(
+            "CREATE TABLE ama_index(
+                url_id TEXT,
+                cc_name TEXT,
+                fan_name TEXT,
+            );"
+        )?;
+        // Begin data dump here.
+        for ama_record in ama_index {
+            cnxn.execute(
+                "INSERT INTO ama_index(
+                    url_id,
+                    cc_name,
+                    fan_name,
+                    ) VALUES (?1, ?2, ?3);",
+                (
+                    ama_record.url_id,
+                    ama_record.cc_name,
+                    ama_record.fan_name,
+                )
+            )?;
+        };
+    }
+
+    fn load_ama_index(full_dbpath: &str) -> Vec<AmaRecord> {
+        let mut ama_index: Vec<AmaRecord> = Vec::new();
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        let mut stmt: rusqlite::Statement = cnxn.prepare(
+            "SELECT url_id, cc_name, fan_name FROM ama_index;"
+            ).unwrap();
+        // TODO: Figure out how to load rows in from SQL database.
+    }
 
     pub fn get_url(url_id: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
@@ -163,8 +188,6 @@ mod ama_indexer {
 
 }
 
-// TODO: Learn how to write better tests.
-// TODO: Learn how to structure the project better.
 #[cfg(test)]
 mod ama_indexer_tests {
     use crate::ama_indexer;
@@ -205,11 +228,7 @@ mod ama_indexer_tests {
         }
     }
 
-    #[test]
-    fn test_compile_ama_index() {
-        // Decided not to rely on fetched data for test.
-        // let full_opath: String = format!("{}/{}.html", ama_indexer::ODIR_NAME, ama_indexer::LC_FNAME);
-        /*fs::read_to_string(full_opath).unwrap();*/
+    fn get_ama_index() -> Vec<ama_indexer::AmaRecord> {
         let index_tup: Vec<(&str, &str, &str)> = Vec::from(
             [
                 ("cc_name1", "fan_name1", "1"),
@@ -233,6 +252,15 @@ mod ama_indexer_tests {
             };
             expected.push(ama_record);
         };
+        expected
+    }
+
+    #[test]
+    fn test_compile_ama_index() {
+        // Decided not to rely on fetched data for test.
+        // let full_opath: String = format!("{}/{}.html", ama_indexer::ODIR_NAME, ama_indexer::LC_FNAME);
+        /*fs::read_to_string(full_opath).unwrap();*/
+        let expected: Vec<ama_indexer::AmaRecord> = get_ama_index();
         let start_text: &str = "cc_name1:";
         let raw_index: &str = r#"
             <p><strong>cc_name1:</strong></p>
@@ -271,8 +299,27 @@ mod ama_indexer_tests {
         assert_eq!(expected, actual);
     }
 
+    /*
     #[test]
     fn test_identify_duplicates() {
+        let ama_index: Vec<AmaRecord> = get_ama_index();
+        let expected: Vec<AmaRecord> = Vec::from(
+            [
+                AmaRecord {
+                    cc_name: "cc_name1",
+                    fan_name: "fan_name1",
+                    url_id: "1",
+                },
+                AmaRecord {
+                    cc_name: "cc_name1",
+                    fan_name: "fan_name3",
+                    url_id: "1",
+                },
+            ]
+        );
+        let actual: Vec<AmaRecord> = ama_indexer::identify_duplicates(ama_index);
+        assert_eq!(expected, actual);
     }
+    */
 
 }
