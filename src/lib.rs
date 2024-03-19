@@ -129,15 +129,17 @@ mod ama_indexer {
     }
     */
 
-    fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> Result<usize> {
+    fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         cnxn.execute(
             "CREATE TABLE ama_index(
                 url_id TEXT,
                 cc_name TEXT,
                 fan_name TEXT,
-            );"
+            );",
+            ()
         )?;
+        let ama_index_len: usize = ama_index.len();
         // Begin data dump here.
         for ama_record in ama_index {
             cnxn.execute(
@@ -153,6 +155,7 @@ mod ama_indexer {
                 )
             )?;
         };
+        Ok(ama_index_len)
     }
 
     fn load_ama_index(full_dbpath: &str) -> Vec<AmaRecord> {
@@ -166,15 +169,15 @@ mod ama_indexer {
             |row| {
                 Ok(
                     AmaRecord {
-                    url_id: row.get(0).unwrap(),
-                    cc_name: row.get(1).unwrap(),
-                    fan_name: row.get(2).unwrap(),
+                        url_id: row.get(0).unwrap(),
+                        cc_name: row.get(1).unwrap(),
+                        fan_name: row.get(2).unwrap(),
                     }
                 )
             }
         ).unwrap();
         for ama_record in ama_record_iter {
-            ama_index.push(ama_record);
+            ama_index.push(ama_record.unwrap());
         };
         ama_index
     }
@@ -317,7 +320,7 @@ mod ama_indexer_tests {
     #[test]
     fn test_save_ama_index() {
         let ama_index: Vec<AmaRecord> = get_ama_index();
-        let full_dbpath: = "output/ama_index-save_test.db";
+        let full_dbpath: &str = "output/ama_index-save_test.db";
         // if full_dbpath.exists(): rm full_dbpath
         let save_result: Result<usize> = ama_indexer::save_ama_index(ama_index);
         // fetch saved database if successful.
@@ -337,7 +340,7 @@ mod ama_indexer_tests {
                 )
             }
         ).unwrap();
-        let mut ama_index: Vec<AmaRecord = Vec::new();
+        let mut ama_index: Vec<AmaRecord> = Vec::new();
         for ama_record in ama_record_iter {
             ama_index.push(ama_record);
         };
