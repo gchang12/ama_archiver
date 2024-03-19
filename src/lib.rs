@@ -10,16 +10,16 @@
 */
 
 // function signature lifted straight off: https://doc.rust-lang.org/std/fs/fn.remove_file.html
-// TODO: Research more thoroughly.
+// for more info, refer to: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 use std::path::Path;
 use std::fs;
-fn remove_file<P: AsRef<Path>>(full_path: P) -> () {
+fn remove_file(full_path: impl AsRef<Path>) -> () {
     match fs::remove_file(full_path) {
         Ok(()) => {
-            println!("File removed")
+            println!("File removed: {}", full_path);
         },
         Err(rm_err) => {
-            panic!("File not removed: {:?}", rm_err);
+            eprintln!("File not removed: {:?}", rm_err);
         },
     };
 }
@@ -35,7 +35,9 @@ mod ama_indexer {
     pub const LC_FNAME: &str = "link-compendium";
     pub const ODIR_NAME: &str = "output";
     const FIRST_CC_NAME: &str = "Daron Nefcy:";
-    const URL_TEMPLATE: &str = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
+    // '/'-split list must be modified:
+    // -2: '' -> {url_id}
+    const URL_TEMPLATE: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
 
     #[derive(PartialEq)]
     #[derive(Debug)]
@@ -202,7 +204,7 @@ mod ama_indexer {
         // 0: 'https:'
         // 1: ''
         // 2: 'www.reddit.com'
-        url_parts[2] = "old.reddit.com";
+        //url_parts[2] = "old.reddit.com";
         let url: String = url_parts.join("/");
         url
     }
@@ -409,7 +411,6 @@ mod ama_indexer_tests {
         let expected: Vec<AmaRecord> = get_ama_index();
         assert_eq!(actual, expected);
         remove_file(full_dbpath);
-
     }
 
 }
