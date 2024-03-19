@@ -9,6 +9,21 @@
  * <p><a href="...">fan name</a></p>
 */
 
+// function signature lifted straight off: https://doc.rust-lang.org/std/fs/fn.remove_file.html
+// TODO: Research more thoroughly.
+use std::path::Path;
+use std::fs;
+fn remove_file<P: AsRef<Path>>(full_path: P) -> () {
+    match fs::remove_file(full_path) {
+        Ok(()) => {
+            println!("File removed")
+        },
+        Err(rm_err) => {
+            panic!("File not removed: {:?}", rm_err);
+        },
+    };
+}
+
 mod ama_indexer {
     use ureq;
     use ego_tree::NodeRef;
@@ -207,7 +222,7 @@ mod ama_indexer_tests {
     use crate::ama_indexer;
     use crate::ama_indexer::AmaRecord;
     use std::fs;
-    use std::path::Path;
+    use super::remove_file;
 
     #[test]
     fn test_get_url() {
@@ -316,19 +331,6 @@ mod ama_indexer_tests {
         assert_eq!(actual, expected);
         // Cleanup
         remove_file(full_htmlpath);
-    }
-
-    // function signature lifted straight off: https://doc.rust-lang.org/std/fs/fn.remove_file.html
-    // TODO: Research more thoroughly.
-    fn remove_file<P: AsRef<Path>>(full_path: P) -> () {
-        match fs::remove_file(full_path) {
-            Ok(()) => {
-                println!("File removed")
-            },
-            Err(rm_err) => {
-                panic!("File not removed: {:?}", rm_err);
-            },
-        };
     }
 
     #[test]
