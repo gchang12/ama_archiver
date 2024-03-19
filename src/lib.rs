@@ -129,13 +129,13 @@ mod ama_indexer {
     }
     */
 
-    fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
+    pub fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         cnxn.execute(
-            "CREATE TABLE ama_index(
+            "CREATE TABLE IF NOT EXISTS ama_index (
                 url_id TEXT,
                 cc_name TEXT,
-                fan_name TEXT,
+                fan_name TEXT
             );",
             ()
         )?;
@@ -143,11 +143,7 @@ mod ama_indexer {
         // Begin data dump here.
         for ama_record in ama_index {
             cnxn.execute(
-                "INSERT INTO ama_index(
-                    url_id,
-                    cc_name,
-                    fan_name,
-                    ) VALUES (?1, ?2, ?3);",
+                "INSERT INTO ama_index VALUES (?1, ?2, ?3);",
                 (
                     ama_record.url_id,
                     ama_record.cc_name,
@@ -158,7 +154,7 @@ mod ama_indexer {
         Ok(ama_index_len)
     }
 
-    fn load_ama_index(full_dbpath: &str) -> Vec<AmaRecord> {
+    pub fn load_ama_index(full_dbpath: &str) -> Vec<AmaRecord> {
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let mut stmt: rusqlite::Statement = cnxn.prepare(
@@ -209,6 +205,7 @@ mod ama_indexer {
 #[cfg(test)]
 mod ama_indexer_tests {
     use crate::ama_indexer;
+    use crate::ama_indexer::AmaRecord;
     use std::fs;
 
     #[test]
@@ -322,7 +319,15 @@ mod ama_indexer_tests {
         let ama_index: Vec<AmaRecord> = get_ama_index();
         let full_dbpath: &str = "output/ama_index-save_test.db";
         // if full_dbpath.exists(): rm full_dbpath
-        let save_result: Result<usize> = ama_indexer::save_ama_index(ama_index);
+        let save_result: Result<usize, _> = ama_indexer::save_ama_index(ama_index, full_dbpath);
+        match save_result {
+            Ok(numrows) => {
+                println!("{} rows written", numrows);
+            },
+            Err(sql_err) => {
+                panic!("SQL error occurred: {:?}",  sql_err);
+            },
+        };
         // fetch saved database if successful.
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let mut stmt: rusqlite::Statement = cnxn.prepare(
@@ -342,7 +347,7 @@ mod ama_indexer_tests {
         ).unwrap();
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         for ama_record in ama_record_iter {
-            ama_index.push(ama_record);
+            ama_index.push(ama_record.unwrap());
         };
         // How to compare original and expected, when the former is moved?
     }
@@ -353,21 +358,25 @@ mod ama_indexer_tests {
         let expected: Vec<AmaRecord> = get_ama_index();
         // Insert into table, then test load.
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
-        cnxn.execute(
-            "CREATE TABLE ama_index(
+        match cnxn.execute(
+            "CREATE TABLE IF NOT EXISTS ama_index (
                 url_id TEXT,
                 cc_name TEXT,
                 fan_name TEXT,
-            );"
-        ).unwrap();
+            );",
+            ()
+        ) {
+            Ok(_) => {
+                println!("Table created.");
+            },
+            Err(sql_err) => {
+                eprintln!("SQL error: {:?}", sql_err);
+            },
+        };
         // Begin data dump here.
-        for ama_record in ama_index {
+        for ama_record in expected {
             cnxn.execute(
-                "INSERT INTO ama_index(
-                    url_id,
-                    cc_name,
-                    fan_name,
-                    ) VALUES (?1, ?2, ?3);",
+                "INSERT INTO ama_index VALUES (?1, ?2, ?3);",
                 (
                     ama_record.url_id,
                     ama_record.cc_name,
