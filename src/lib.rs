@@ -207,6 +207,7 @@ mod ama_indexer_tests {
     use crate::ama_indexer;
     use crate::ama_indexer::AmaRecord;
     use std::fs;
+    use std::path::Path;
 
     #[test]
     fn test_get_url() {
@@ -289,7 +290,7 @@ mod ama_indexer_tests {
             <p><a href="4">fan_name5</a></p>
         "#;
         let actual: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index.to_string(), start_text);
-        assert_eq!(expected, actual);
+        assert_eq!(actual, expected);
     }
 
     #[test]
@@ -309,9 +310,25 @@ mod ama_indexer_tests {
         let lc_fname: &str = "test_save_raw_index-output";
         // Assert that saved text is the same as the loaded text.
         let () = ama_indexer::save_raw_index(raw_index.to_string(), odir_name, lc_fname);
-        let actual: String = fs::read_to_string(format!("{}/{}.html", odir_name, lc_fname)).unwrap();
+        let full_htmlpath: String = format!("{}/{}.html", odir_name, lc_fname);
+        let actual: String = fs::read_to_string(&full_htmlpath).unwrap();
         let expected: String = raw_index.to_string();
-        assert_eq!(expected, actual);
+        assert_eq!(actual, expected);
+        // Cleanup
+        remove_file(full_htmlpath);
+    }
+
+    // function signature lifted straight off: https://doc.rust-lang.org/std/fs/fn.remove_file.html
+    // TODO: Research more thoroughly.
+    fn remove_file<P: AsRef<Path>>(full_path: P) -> () {
+        match fs::remove_file(full_path) {
+            Ok(()) => {
+                println!("File removed")
+            },
+            Err(rm_err) => {
+                panic!("File not removed: {:?}", rm_err);
+            },
+        };
     }
 
     #[test]
@@ -328,7 +345,7 @@ mod ama_indexer_tests {
                 panic!("SQL error occurred: {:?}",  sql_err);
             },
         };
-        // fetch saved database if successful.
+        // fetch saved database if successful. Lifted straight off front page.
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let mut stmt: rusqlite::Statement = cnxn.prepare(
             "SELECT url_id, cc_name, fan_name FROM ama_index;"
@@ -338,31 +355,33 @@ mod ama_indexer_tests {
             |row| {
                 Ok(
                     AmaRecord {
-                    url_id: row.get(0).unwrap(),
-                    cc_name: row.get(1).unwrap(),
-                    fan_name: row.get(2).unwrap(),
+                        url_id: row.get(0).unwrap(),
+                        cc_name: row.get(1).unwrap(),
+                        fan_name: row.get(2).unwrap(),
                     }
                 )
             }
         ).unwrap();
-        let mut ama_index: Vec<AmaRecord> = Vec::new();
+        remove_file(full_dbpath);
+        let mut actual: Vec<AmaRecord> = Vec::new();
         for ama_record in ama_record_iter {
-            ama_index.push(ama_record.unwrap());
+            actual.push(ama_record.unwrap());
         };
-        // How to compare original and expected, when the former is moved?
+        let expected: Vec<AmaRecord> = get_ama_index();
+        assert_eq!(actual, expected);
     }
 
     #[test]
     fn test_load_ama_index() {
         let full_dbpath: &str = "output/ama_index-load_test.db";
-        let expected: Vec<AmaRecord> = get_ama_index();
+        let ama_index: Vec<AmaRecord> = get_ama_index();
         // Insert into table, then test load.
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         match cnxn.execute(
             "CREATE TABLE IF NOT EXISTS ama_index (
                 url_id TEXT,
                 cc_name TEXT,
-                fan_name TEXT,
+                fan_name TEXT
             );",
             ()
         ) {
@@ -374,7 +393,7 @@ mod ama_indexer_tests {
             },
         };
         // Begin data dump here.
-        for ama_record in expected {
+        for ama_record in ama_index {
             cnxn.execute(
                 "INSERT INTO ama_index VALUES (?1, ?2, ?3);",
                 (
@@ -385,58 +404,10 @@ mod ama_indexer_tests {
             ).unwrap();
         };
         let actual: Vec<AmaRecord> = ama_indexer::load_ama_index(full_dbpath);
-        // Assert actual == expected
-        /*
-        full_dbpath = self.odir_path.joinpath("ama_index-load_test.db")
-        if full_dbpath.exists():
-            full_dbpath.unlink()
-        expected = self.ama_index.copy()
-        for record in expected:
-            record['url_id'] = record.pop("url")
-        with sqlite3.connect(full_dbpath) as cnxn:
-            crs = cnxn.execute("""
-                CREATE TABLE ama_index(
-                    cc_name TEXT NOT NULL,
-                    fan_name TEXT NOT NULL,
-                    url_id TEXT NOT NULL
-                );
-                """)
-            crs.executemany("INSERT INTO ama_index VALUES(:cc_name, :fan_name, :url_id);", expected)
-        actual = indexer.load_ama_index(full_dbpath)
-        full_dbpath.unlink()
-        def original_order(element):
-            """
-            Function to sort dict-list by order in original self.ama_index.
+        let expected: Vec<AmaRecord> = get_ama_index();
+        assert_eq!(actual, expected);
+        remove_file(full_dbpath);
 
-            Assume: All entries in actual are contained in self.ama_index.
-            """
-            return self.ama_index.index(element)
-        actual.sort(key=original_order)
-        self.assertListEqual(actual, expected)
-        */
     }
-
-    /*
-    #[test]
-    fn test_identify_duplicates() {
-        let ama_index: Vec<AmaRecord> = get_ama_index();
-        let expected: Vec<AmaRecord> = Vec::from(
-            [
-                AmaRecord {
-                    cc_name: "cc_name1",
-                    fan_name: "fan_name1",
-                    url_id: "1",
-                },
-                AmaRecord {
-                    cc_name: "cc_name1",
-                    fan_name: "fan_name3",
-                    url_id: "1",
-                },
-            ]
-        );
-        let actual: Vec<AmaRecord> = ama_indexer::identify_duplicates(ama_index);
-        assert_eq!(expected, actual);
-    }
-    */
 
 }
