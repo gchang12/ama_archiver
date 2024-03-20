@@ -228,7 +228,6 @@ pub mod ama_indexer {
 
 #[cfg(test)]
 mod ama_indexer_tests {
-
     use crate::ama_indexer;
     use crate::ama_indexer::AmaRecord;
     use std::fs;
