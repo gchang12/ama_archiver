@@ -139,10 +139,10 @@ pub mod ama_indexer {
     /*
     fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) -> () {
         // Identify duplicate url_id rows:
-        // SELECT * FROM ama_index WHERE url_id IN (SELECT url_id FROM ama_index GROUP BY url_id HAVING COUNT(url_id) > 1);
+        // - SELECT * FROM ama_index WHERE url_id IN (SELECT url_id FROM ama_index GROUP BY url_id HAVING COUNT(url_id) > 1);
         // Make corrections:
-        // UPDATE ama_index SET url_id='evw8g9o' WHERE fan_name='Joe_Zt' AND cc_name='Daron Nefcy';
-        // UPDATE ama_index SET url_id='evwbgza' WHERE fan_name='sloppyjeaux' AND cc_name='Adam McArthur';
+        // - UPDATE ama_index SET url_id='evw8g9o' WHERE fan_name='Joe_Zt' AND cc_name='Daron Nefcy';
+        // - UPDATE ama_index SET url_id='evwbgza' WHERE fan_name='sloppyjeaux' AND cc_name='Adam McArthur';
         let mut urlid_list: Vec<String> = Vec::new();
         let mut dup_list: Vec<AmaRecord> = Vec::new();
         for ama_record_ref in (*ama_index_ref).iter() {
@@ -228,6 +228,7 @@ pub mod ama_indexer {
 
 #[cfg(test)]
 mod ama_indexer_tests {
+
     use crate::ama_indexer;
     use crate::ama_indexer::AmaRecord;
     use std::fs;
