@@ -11,12 +11,14 @@
 
 // function signature lifted straight off: https://doc.rust-lang.org/std/fs/fn.remove_file.html
 // for more info, refer to: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
+
 use std::path::Path;
 use std::fs;
+
 fn remove_file(full_path: impl AsRef<Path>) -> () {
     match fs::remove_file(full_path) {
         Ok(()) => {
-            println!("File removed: {}", full_path);
+            println!("File removed");
         },
         Err(rm_err) => {
             eprintln!("File not removed: {:?}", rm_err);
@@ -24,17 +26,18 @@ fn remove_file(full_path: impl AsRef<Path>) -> () {
     };
 }
 
-mod ama_indexer {
+pub mod ama_indexer {
     use ureq;
     use ego_tree::NodeRef;
     use std::fs;
     use scraper::{Html, Selector, ElementRef};
     use rusqlite;
 
-    const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
+    pub const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
+    pub const DB_FNAME: &str = "ama_archive.db";
     pub const LC_FNAME: &str = "link-compendium";
     pub const ODIR_NAME: &str = "output";
-    const FIRST_CC_NAME: &str = "Daron Nefcy:";
+    pub const FIRST_CC_NAME: &str = "Daron Nefcy:";
     // '/'-split list must be modified:
     // -2: '' -> {url_id}
     const URL_TEMPLATE: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
@@ -135,7 +138,11 @@ mod ama_indexer {
 
     /*
     fn identify_duplicates(ama_index_ref: &Vec<AmaRecord>) -> () {
-        // #sqlite> SELECT * FROM ama_index WHERE url_id IN (SELECT url_id FROM ama_index GROUP BY url_id HAVING COUNT(url_id) > 1);
+        // Identify duplicate url_id rows:
+        // SELECT * FROM ama_index WHERE url_id IN (SELECT url_id FROM ama_index GROUP BY url_id HAVING COUNT(url_id) > 1);
+        // Make corrections:
+        // UPDATE ama_index SET url_id='evw8g9o' WHERE fan_name='Joe_Zt' AND cc_name='Daron Nefcy';
+        // UPDATE ama_index SET url_id='evwbgza' WHERE fan_name='sloppyjeaux' AND cc_name='Adam McArthur';
         let mut urlid_list: Vec<String> = Vec::new();
         let mut dup_list: Vec<AmaRecord> = Vec::new();
         for ama_record_ref in (*ama_index_ref).iter() {
@@ -226,6 +233,21 @@ mod ama_indexer_tests {
     use std::fs;
     use super::remove_file;
 
+    fn get_raw_index() -> String {
+        let raw_index: &str = r#"
+            <p><strong>cc_name1:</strong></p>
+
+            <p><a href="1">fan_name1</a></p>
+            <p><a href="2">fan_name2</a></p>
+            <p><a href="1">fan_name3</a></p>
+            <hr />
+            <p><strong>cc_name2:</strong></p>
+            <p><a href="3">fan_name4</a></p>
+            <p><a href="4">fan_name5</a></p>
+        "#;
+        raw_index.to_string()
+    }
+
     #[test]
     fn test_get_url() {
         let url_id: String = "nyet".to_string();
@@ -295,34 +317,14 @@ mod ama_indexer_tests {
         /*fs::read_to_string(full_opath).unwrap();*/
         let expected: Vec<ama_indexer::AmaRecord> = get_ama_index();
         let start_text: &str = "cc_name1:";
-        let raw_index: &str = r#"
-            <p><strong>cc_name1:</strong></p>
-
-            <p><a href="1">fan_name1</a></p>
-            <p><a href="2">fan_name2</a></p>
-            <p><a href="1">fan_name3</a></p>
-            <hr />
-            <p><strong>cc_name2:</strong></p>
-            <p><a href="3">fan_name4</a></p>
-            <p><a href="4">fan_name5</a></p>
-        "#;
+        let raw_index: &str = &get_raw_index();
         let actual: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index.to_string(), start_text);
         assert_eq!(actual, expected);
     }
 
     #[test]
     fn test_save_raw_index() {
-        let raw_index: &str = r#"
-            <p><strong>cc_name1:</strong></p>
-
-            <p><a href="1">fan_name1</a></p>
-            <p><a href="2">fan_name2</a></p>
-            <p><a href="1">fan_name3</a></p>
-            <hr />
-            <p><strong>cc_name2:</strong></p>
-            <p><a href="3">fan_name4</a></p>
-            <p><a href="4">fan_name5</a></p>
-        "#;
+        let raw_index: &str = &get_raw_index();
         let odir_name: &str = ama_indexer::ODIR_NAME;
         let lc_fname: &str = "test_save_raw_index-output";
         // Assert that saved text is the same as the loaded text.
