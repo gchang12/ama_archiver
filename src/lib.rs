@@ -34,10 +34,7 @@ pub mod ama_indexer {
     use rusqlite;
 
     pub const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
-    pub const DB_FNAME: &str = "ama_archive.db";
-    pub const LC_FNAME: &str = "link-compendium";
     pub const ODIR_NAME: &str = "output";
-    pub const FIRST_CC_NAME: &str = "Daron Nefcy:";
     // '/'-split list must be modified:
     // -2: '' -> {url_id}
     const URL_TEMPLATE: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
