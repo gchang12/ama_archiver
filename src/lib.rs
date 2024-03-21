@@ -449,8 +449,8 @@ pub mod ama_scraper {
         for (commentno, usertext_node) in parsed_html.select(&usertextbody_selector).enumerate() {
             match commentno {
                 0 => continue,
-                1 => ama_query.question_text = Some(Html::parse_fragment(&usertext_node.inner_html()).html()),
-                2 => ama_query.answer_text = Some(Html::parse_fragment(&usertext_node.inner_html()).html()),
+                1 => ama_query.question_text = Some(&usertext_node.inner_html()),
+                2 => ama_query.answer_text = Some(&usertext_node.inner_html()),
                 extra => {},// eprintln!("Extraneous node found: {:?}", extra),
             }
         }
