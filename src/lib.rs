@@ -33,7 +33,7 @@ pub mod ama_indexer {
     use scraper::{Html, Selector, ElementRef};
     use rusqlite;
 
-    pub const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
+    pub const LC_FNAME: &str = "link-compendium";
     pub const ODIR_NAME: &str = "output";
     // '/'-split list must be modified:
     // -2: '' -> {url_id}
@@ -54,7 +54,7 @@ pub mod ama_indexer {
         let request: ureq::Request = ureq::get(url);
         let raw_html: String = match request.call() {
             Ok(resp) => resp.into_string().unwrap(),
-            Err(reqerr) => panic!("Unable to get response from '{}': {:?}", LC_URL, reqerr),
+            Err(reqerr) => panic!("Unable to get response from '{}': {:?}", url, reqerr),
         };
         raw_html
     }
@@ -150,16 +150,20 @@ pub mod ama_indexer {
     }
     */
 
-    pub fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
+    pub fn create_db(full_dbpath: &str) -> () {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
-        cnxn.execute(
+        let _ = cnxn.execute(
             "CREATE TABLE IF NOT EXISTS ama_index (
                 url_id TEXT,
                 cc_name TEXT,
                 fan_name TEXT
             );",
             ()
-        )?;
+        ).unwrap();
+    }
+
+    pub fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let ama_index_len: usize = ama_index.len();
         // Begin data dump here.
         for ama_record in ama_index {
@@ -339,6 +343,7 @@ mod ama_indexer_tests {
         let ama_index: Vec<AmaRecord> = get_ama_index();
         let full_dbpath: &str = "output/ama_index-save_test.db";
         // if full_dbpath.exists(): rm full_dbpath
+        let () = ama_indexer::create_db(full_dbpath);
         let save_result: Result<usize, _> = ama_indexer::save_ama_index(ama_index, full_dbpath);
         match save_result {
             Ok(numrows) => {
@@ -349,7 +354,7 @@ mod ama_indexer_tests {
             },
         };
         // fetch saved database if successful. Lifted straight off front page.
-        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        let cnxn: rusqlite::Connection = get_db_cnxn(full_dbpath);
         let mut stmt: rusqlite::Statement = cnxn.prepare(
             "SELECT url_id, cc_name, fan_name FROM ama_index;"
             ).unwrap();
@@ -374,11 +379,7 @@ mod ama_indexer_tests {
         assert_eq!(actual, expected);
     }
 
-    #[test]
-    fn test_load_ama_index() {
-        let full_dbpath: &str = "output/ama_index-load_test.db";
-        let ama_index: Vec<AmaRecord> = get_ama_index();
-        // Insert into table, then test load.
+    fn get_db_cnxn(full_dbpath: &str) -> rusqlite::Connection {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         match cnxn.execute(
             "CREATE TABLE IF NOT EXISTS ama_index (
@@ -395,6 +396,15 @@ mod ama_indexer_tests {
                 eprintln!("SQL error: {:?}", sql_err);
             },
         };
+        cnxn
+    }
+
+    #[test]
+    fn test_load_ama_index() {
+        let full_dbpath: &str = "output/ama_index-load_test.db";
+        let ama_index: Vec<AmaRecord> = get_ama_index();
+        // Insert into table, then test load.
+        let cnxn: rusqlite::Connection = get_db_cnxn(full_dbpath);
         // Begin data dump here.
         for ama_record in ama_index {
             cnxn.execute(
@@ -408,6 +418,226 @@ mod ama_indexer_tests {
         };
         let actual: Vec<AmaRecord> = ama_indexer::load_ama_index(full_dbpath);
         let expected: Vec<AmaRecord> = get_ama_index();
+        assert_eq!(actual, expected);
+        remove_file(full_dbpath);
+    }
+
+}
+
+pub mod ama_scraper {
+    use scraper::{Html, Selector};
+    use std::path::Path;
+    use rusqlite;
+
+
+    #[derive(PartialEq)]
+    #[derive(Debug)]
+    pub struct AmaQuery {
+        pub url_id: String,
+        pub question_text: Option<String>,
+        pub answer_text: Option<String>,
+    }
+
+    pub fn fetch_ama_query(url: &str, ama_query: &mut AmaQuery) -> () {
+        let request: ureq::Request = ureq::get(url);
+        let raw_html: String = match request.call() {
+            Ok(resp) => resp.into_string().unwrap(),
+            Err(reqerr) => panic!("Unable to get response from '{}': {:?}", url, reqerr),
+        };
+        let parsed_html: Html = Html::parse_document(&raw_html);
+        let usertextbody_selector: Selector = Selector::parse(".usertext-body").unwrap();
+        for (commentno, usertext_node) in parsed_html.select(&usertextbody_selector).enumerate() {
+            match commentno {
+                0 => continue,
+                1 => ama_query.question_text = Some(Html::parse_fragment(&usertext_node.inner_html()).html()),
+                2 => ama_query.answer_text = Some(Html::parse_fragment(&usertext_node.inner_html()).html()),
+                extra => {},// eprintln!("Extraneous node found: {:?}", extra),
+            }
+        }
+    }
+
+    pub fn create_db(full_dbpath: &str) -> () {
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        let _ = cnxn.execute(
+            "CREATE TABLE IF NOT EXISTS ama_queries (
+                url_id TEXT PRIMARY KEY,
+                question_text TEXT NOT NULL,
+                answer_text TEXT NOT NULL
+            );",
+            ()
+        ).unwrap();
+    }
+
+    pub fn save_ama_query_to_db(ama_query: AmaQuery, full_dbpath: impl AsRef<Path>) -> rusqlite::Result<usize> {
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        // Begin data dump here.
+        cnxn.execute(
+            "INSERT INTO ama_queries VALUES (?1, ?2, ?3);",
+            (
+                ama_query.url_id,
+                ama_query.question_text.unwrap(),
+                ama_query.answer_text.unwrap(),
+            )
+        )?;
+        // Learn how to get length of INSERT result.
+        Ok(0)
+    }
+
+    pub fn load_ama_queries_from_db(full_dbpath: impl AsRef<Path>) -> Vec<AmaQuery> {
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        let mut stmt: rusqlite::Statement = cnxn.prepare(
+            "SELECT url_id, question_text, answer_text FROM ama_queries;"
+            ).unwrap();
+        let ama_query_iter = stmt.query_map(
+            [],
+            |row| {
+                Ok(
+                    AmaQuery {
+                        url_id: row.get(0).unwrap(),
+                        question_text: Some(row.get(1).unwrap()),
+                        answer_text: Some(row.get(2).unwrap()),
+                    }
+                )
+            }
+        ).unwrap();
+        let mut ama_queries: Vec<AmaQuery> = Vec::new();
+        for ama_query in ama_query_iter {
+            ama_queries.push(ama_query.unwrap());
+        }
+        ama_queries
+    }
+
+}
+
+#[cfg(test)]
+mod ama_scraper_tests {
+    use crate::ama_scraper;
+    use crate::ama_scraper::AmaQuery;
+    use super::remove_file;
+    use rusqlite;
+
+    #[test]
+    fn test_fetch_ama_query() {
+        let url: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything/evw3fne/?context=3";
+        let mut ama_query: AmaQuery = AmaQuery {
+            url_id: "evw3fne".to_string(),
+            question_text: None,
+            answer_text: None,
+        };
+        while let None = ama_query.answer_text {
+            let () = ama_scraper::fetch_ama_query(url, &mut ama_query);
+        }
+        if let None = ama_query.question_text {
+            panic!("ama_query.question_text is unexpectedly None. Inspect!");
+        }
+        if let None = ama_query.answer_text {
+            panic!("ama_query.answer_text is unexpectedly None. Inspect!");
+        }
+    }
+
+    #[test]
+    fn test_save_ama_query_to_db() {
+        let ama_query: AmaQuery = AmaQuery {
+            url_id: "url_id".to_string(),
+            question_text: Some("question_text".to_string()),
+            answer_text: Some("answer_text".to_string()),
+        };
+        let outdir: &str = "output";
+        let filename: &str = "ama_query-save_test.db";
+        let full_dbpath: String = format!("{}/{}", outdir, filename);
+        // remove_file(&full_dbpath);
+        let () = ama_scraper::create_db(&full_dbpath);
+        match ama_scraper::save_ama_query_to_db(ama_query, &full_dbpath) {
+            Ok(_) => println!("AmaQuery successfully saved to database."),
+            Err(sql_save_err) => panic!("Problem saving to database: {:?}", sql_save_err),
+        };
+        // Load from the database, and verify record.
+        let cnxn: rusqlite::Connection = get_db_cnxn(&full_dbpath);
+        let mut stmt: rusqlite::Statement = cnxn.prepare(
+            "SELECT url_id, question_text, answer_text FROM ama_queries;"
+            ).unwrap();
+        let ama_query_iter = stmt.query_map(
+            [],
+            |row| {
+                Ok(
+                    AmaQuery {
+                        url_id: row.get(0).unwrap(),
+                        question_text: Some(row.get(1).unwrap()),
+                        answer_text: Some(row.get(2).unwrap()),
+                    }
+                )
+            }
+        ).unwrap();
+        let expected: AmaQuery = AmaQuery {
+            url_id: "url_id".to_string(),
+            question_text: Some("question_text".to_string()),
+            answer_text: Some("answer_text".to_string()),
+        };
+        let mut actual: AmaQuery = AmaQuery {
+            url_id: String::new(),
+            question_text: None,
+            answer_text: None,
+        };
+        for ama_query in ama_query_iter {
+            actual = ama_query.unwrap();
+        }
+        assert_eq!(actual, expected);
+        remove_file(full_dbpath);
+    }
+
+    fn get_db_cnxn(full_dbpath: &str) -> rusqlite::Connection {
+        let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
+        match cnxn.execute(
+            "CREATE TABLE IF NOT EXISTS ama_queries (
+                url_id TEXT PRIMARY KEY,
+                question_text TEXT NOT NULL,
+                answer_text TEXT NOT NULL
+            );",
+            ()
+        ) {
+            Ok(_) => {
+                println!("Table created.");
+            },
+            Err(sql_err) => {
+                eprintln!("SQL error: {:?}", sql_err);
+            },
+        };
+        cnxn
+    }
+
+    #[test]
+    fn test_load_ama_queries_from_db() {
+        let full_dbpath: &str = "output/ama_query-load_test.db";
+        let cnxn: rusqlite::Connection = get_db_cnxn(full_dbpath);
+        // Begin data dump here.
+        let ama_query1: AmaQuery = AmaQuery {
+            url_id: "url_id".to_string(),
+            question_text: Some("question_text".to_string()),
+            answer_text: Some("answer_text".to_string()),
+        };
+        let ama_query2: AmaQuery = AmaQuery {
+            url_id: "url_id2".to_string(),
+            question_text: Some("question_text2".to_string()),
+            answer_text: Some("answer_text2".to_string()),
+        };
+        let expected: Vec<AmaQuery> = Vec::from(
+            [
+                ama_query1,
+                ama_query2,
+            ]
+        );
+        for ama_query in &expected {
+            let _ = cnxn.execute(
+                "INSERT INTO ama_queries VALUES (?1, ?2, ?3);",
+                (
+                    // E0507
+                    (*ama_query).url_id.clone(),
+                    (*ama_query).question_text.clone().unwrap(),
+                    (*ama_query).answer_text.clone().unwrap(),
+                )
+            ).unwrap();
+        }
+        let actual = ama_scraper::load_ama_queries_from_db(full_dbpath);
         assert_eq!(actual, expected);
         remove_file(full_dbpath);
     }
