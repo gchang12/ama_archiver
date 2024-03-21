@@ -15,10 +15,10 @@
 use std::path::Path;
 use std::fs;
 
-fn remove_file(full_path: impl AsRef<Path>) -> () {
-    match fs::remove_file(full_path) {
+fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
+    match fs::remove_file(&full_path) {
         Ok(()) => {
-            println!("File removed");
+            println!("File removed: {:?}", &full_path);
         },
         Err(rm_err) => {
             eprintln!("File not removed: {:?}", rm_err);
