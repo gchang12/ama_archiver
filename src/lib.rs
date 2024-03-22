@@ -428,6 +428,7 @@ pub mod ama_scraper {
     use scraper::{Html, Selector};
     use std::path::Path;
     use rusqlite;
+    use scraper::ElementRef;
 
 
     #[derive(PartialEq)]
@@ -436,6 +437,14 @@ pub mod ama_scraper {
         pub url_id: String,
         pub question_text: Option<String>,
         pub answer_text: Option<String>,
+    }
+
+    pub fn get_html_text(usertext_node: ElementRef) -> Option<String> {
+        let mut buffer: String = String::new();
+        for text in usertext_node.text() {
+            buffer.push_str(text);
+        }
+        Some(buffer)
     }
 
     pub fn fetch_ama_query(url: &str, ama_query: &mut AmaQuery) -> () {
@@ -449,9 +458,9 @@ pub mod ama_scraper {
         for (commentno, usertext_node) in parsed_html.select(&usertextbody_selector).enumerate() {
             match commentno {
                 0 => continue,
-                1 => ama_query.question_text = Some(&usertext_node.inner_html()),
-                2 => ama_query.answer_text = Some(&usertext_node.inner_html()),
-                extra => {},// eprintln!("Extraneous node found: {:?}", extra),
+                1 => ama_query.question_text = get_html_text(usertext_node),
+                2 => ama_query.answer_text = get_html_text(usertext_node),
+                _ => eprintln!("Extraneous node found for url_id: {:?}.", &ama_query.url_id),
             }
         }
     }
@@ -515,6 +524,24 @@ mod ama_scraper_tests {
     use crate::ama_scraper::AmaQuery;
     use super::remove_file;
     use rusqlite;
+    use scraper::{Html, Selector};
+
+    #[test]
+    fn test_get_html_text() {
+        let sample_html: &str = r#"
+            <div class="usertext-body" ><div class="md"><p></p></div></div>
+            <div class="usertext-body" ><div class="md"><p></p></div></div>
+            <div class="usertext-body" ><div class="md"><p>Some of these days, I <em>will</em> survive.</p></div></div>
+        "#;
+        let expected: Option<String> = Some("Some of these days, I will survive.".to_string());
+        let parsed_html: Html = Html::parse_document(sample_html);
+        let usertextbody_selector: Selector = Selector::parse(".usertext-body").unwrap();
+        let mut actual: Option<String> = None;
+        for usertext_node in parsed_html.select(&usertextbody_selector) {
+            actual = ama_scraper::get_html_text(usertext_node);
+        }
+        assert_eq!(actual, expected);
+    }
 
     #[test]
     fn test_fetch_ama_query() {
