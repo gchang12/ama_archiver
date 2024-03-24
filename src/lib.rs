@@ -12,6 +12,9 @@
 // function signature lifted straight off: https://doc.rust-lang.org/std/fs/fn.remove_file.html
 // for more info, refer to: https://doc.rust-lang.org/book/ch10-02-traits.html#traits-as-parameters
 
+// TODO: Implement logging.
+// Insert code to prevent overwrite... if it's actually necessary to do so.
+
 use std::path::Path;
 use std::fs;
 
@@ -152,14 +155,17 @@ pub mod ama_indexer {
 
     pub fn create_db(full_dbpath: &str) -> () {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
-        let _ = cnxn.execute(
-            "CREATE TABLE IF NOT EXISTS ama_index (
+        match cnxn.execute(
+            "CREATE TABLE ama_index (
                 url_id TEXT,
                 cc_name TEXT,
                 fan_name TEXT
             );",
             ()
-        ).unwrap();
+        ) {
+            Ok(_) => println!("'ama_index' table has been created in '{}'.", full_dbpath),
+            Err(_) => panic!("Table 'ama_index' already exists in '{}'. Aborting.", full_dbpath),
+        };
     }
 
     pub fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
@@ -467,14 +473,17 @@ pub mod ama_scraper {
 
     pub fn create_db(full_dbpath: &str) -> () {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
-        let _ = cnxn.execute(
-            "CREATE TABLE IF NOT EXISTS ama_queries (
+        match cnxn.execute(
+            "CREATE TABLE ama_queries (
                 url_id TEXT PRIMARY KEY,
                 question_text TEXT NOT NULL,
                 answer_text TEXT NOT NULL
             );",
             ()
-        ).unwrap();
+        ) {
+            Ok(_) => println!("ama_queries table created in '{}'.", full_dbpath),
+            Err(_) => panic!("The table 'ama_queries' already exists in '{}'. Aborting.", full_dbpath),
+        };
     }
 
     pub fn save_ama_query_to_db(ama_query: AmaQuery, full_dbpath: impl AsRef<Path>) -> rusqlite::Result<usize> {
