@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::fs;
 
+#[allow(dead_code)]
 fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
     match fs::remove_file(&full_path) {
         Ok(()) => {
@@ -20,11 +21,6 @@ pub mod ama_indexer {
     use rusqlite;
     use std::path::Path;
 
-    const DB_FNAME: &str = "ama_archive.db";
-    const FIRST_CC_NAME: &str = "Daron Nefcy:";
-    const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
-    const LC_FNAME: &str = "link-compendium";
-    pub const ODIR_NAME: &str = "output";
     // '/'-split list must be modified:
     // -2: '' -> {url_id}
     const URL_TEMPLATE: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
@@ -38,7 +34,7 @@ pub mod ama_indexer {
     }
 
     pub fn fetch_raw_index(url: &str) -> String {
-        // use ureq to get text of LC_URL
+        // use ureq to get text of Lc_URL
         // save text into html file in output
         // ensure output/ exists beforehand
         let request: ureq::Request = ureq::get(url);
@@ -51,7 +47,7 @@ pub mod ama_indexer {
 
     pub fn save_raw_index(raw_html: String, odir_name: &str, lc_fname: &str) -> () {
         // create 'output' directory
-        // save 'raw_html' to {ODIR_NAME}/{LC_FNAME}.html
+        // save 'raw_html' to {oDIR_NAME}/{lC_FNAME}.html
         let () = match fs::create_dir(odir_name) {
             Ok(()) => println!("'{}' directory successfully created.", odir_name),
             Err(_) => eprintln!("Error creating '{}' directory. Does it exist already?", odir_name),
@@ -218,31 +214,6 @@ pub mod ama_indexer {
         url_id
     }
 
-    pub fn main() -> () {
-        // If the file DNE, then scrape the index off the source, and save it to disk.
-        let raw_htmlfile: String = format!("{}/{}.html", ODIR_NAME, LC_FNAME);
-        let raw_htmlpath: &Path = Path::new(&raw_htmlfile);
-        if !raw_htmlpath.exists() {
-            let raw_html: String = fetch_raw_index(LC_URL);
-            let () = save_raw_index(raw_html, ODIR_NAME, LC_FNAME);
-        };
-        // Grab text off file, and convert it to AmaRecord format.
-        let raw_html: String = fs::read_to_string(raw_htmlfile).unwrap();
-        let mut ama_index: Vec<AmaRecord> = compile_ama_index(raw_html, FIRST_CC_NAME);
-        // Do some data finalizing, and then save ama index
-        for ama_record in &mut ama_index {
-            // 0507
-            let url_id: String = ama_record.url_id.clone();
-            ama_record.url_id = get_urlid(url_id);
-        };
-        let full_dbpath: String = format!("{}/{}", ODIR_NAME, DB_FNAME);
-        let () = create_db(&full_dbpath);
-        match save_ama_index(ama_index, &full_dbpath) {
-            Ok(num_bytes) => println!("{} bytes written.", num_bytes),
-            Err(save_err) => eprintln!("Could not save to disk: {:?}", save_err),
-        };
-    }
-
 }
 
 
@@ -332,7 +303,7 @@ mod ama_indexer_tests {
     #[test]
     fn test_compile_ama_index() {
         // Decided not to rely on fetched data for test.
-        // let full_opath: String = format!("{}/{}.html", ama_indexer::ODIR_NAME, ama_indexer::LC_FNAME);
+        // let full_opath: String = format!("{}/{}.html", ama_indexer::oDIR_NAME, ama_indexer::lC_FNAME);
         /*fs::read_to_string(full_opath).unwrap();*/
         let expected: Vec<ama_indexer::AmaRecord> = get_ama_index();
         let start_text: &str = "cc_name1:";
@@ -344,7 +315,7 @@ mod ama_indexer_tests {
     #[test]
     fn test_save_raw_index() {
         let raw_index: &str = &get_raw_index();
-        let odir_name: &str = ama_indexer::ODIR_NAME;
+        let odir_name: &str = "mock-output";
         let lc_fname: &str = "test_save_raw_index-output";
         // Assert that saved text is the same as the loaded text.
         let () = ama_indexer::save_raw_index(raw_index.to_string(), odir_name, lc_fname);
@@ -354,6 +325,7 @@ mod ama_indexer_tests {
         assert_eq!(actual, expected);
         // Cleanup
         remove_file(full_htmlpath);
+        fs::remove_dir(odir_name);
     }
 
     #[test]

@@ -2,7 +2,7 @@
 use std::path::Path;
 use std::fs;
 
-
+#[allow(dead_code)]
 fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
     match fs::remove_file(&full_path) {
         Ok(()) => {
@@ -20,8 +20,6 @@ pub mod ama_scraper {
     use std::path::Path;
     use rusqlite;
     use scraper::ElementRef;
-    use crate::indexer::ama_indexer;
-
 
     #[derive(PartialEq)]
     #[derive(Debug)]
@@ -109,37 +107,6 @@ pub mod ama_scraper {
             ama_queries.push(ama_query.unwrap());
         }
         ama_queries
-    }
-
-    pub fn main() -> () {
-        // pseudo-constant
-        let full_dbpath: &str = "output/ama_archive.db";
-        let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::load_ama_index(full_dbpath);
-        let () = create_db(full_dbpath);
-        let scraped_ama_queries: Vec<AmaQuery> = load_ama_queries_from_db(full_dbpath);
-        let scraped_urls: Vec<String> = scraped_ama_queries.into_iter().map(|query| query.url_id).collect();
-        let record_total = ama_index.len();
-        for (recordno, ama_record) in ama_index.into_iter().enumerate() {
-            if scraped_urls.contains(&ama_record.url_id) {
-                continue;
-            }
-            println!("Scraping record {}/{} for 'url_id': {}.", recordno + 1, record_total, &ama_record.url_id);
-            let mut fetched_ama_query = AmaQuery {
-                url_id: ama_record.url_id.clone(),
-                question_text: None,
-                answer_text: None,
-            };
-            let url_id: String = ama_record.url_id;
-            let url: String = ama_indexer::get_url(url_id);
-            let mut num_attempts: u32 = 1;
-            while let None = fetched_ama_query.answer_text {
-                println!("Fetching record... Attempt: {}", num_attempts);
-                let () = fetch_ama_query(&url, &mut fetched_ama_query);
-                num_attempts += 1;
-            };
-            let _ = save_ama_query_to_db(fetched_ama_query, full_dbpath);
-        };
-        println!("All {} queries have been scraped.", record_total);
     }
 
 }
