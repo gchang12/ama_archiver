@@ -168,7 +168,7 @@ pub mod ama_indexer {
         Ok(ama_index_len)
     }
 
-    pub fn load_ama_index(full_dbpath: &str) -> Vec<AmaRecord> {
+    pub fn load_ama_index(full_dbpath: impl AsRef<Path>) -> Vec<AmaRecord> {
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let mut stmt: rusqlite::Statement = cnxn.prepare(

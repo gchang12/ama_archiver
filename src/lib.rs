@@ -32,9 +32,11 @@ const DB_FNAME: &str = "ama_archive.db";
 
 pub fn write_filetree() -> () {
     let db_filename: String = format!("{}/{}", ODIR_NAME, DB_FNAME);
-    let ama_queries: Vec<ama_scraper::AmaQuery> = ama_scraper::load_ama_queries_from_db(db_filename.clone());
-    let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::load_ama_index(db_filename.as_str());
-    let mut url_id: String = String::new(); let mut temp_query = ama_scraper::AmaQuery { url_id: String::new(),
+    let ama_queries: Vec<ama_scraper::AmaQuery> = ama_scraper::load_ama_queries_from_db(&db_filename);
+    let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::load_ama_index(&db_filename);
+    // query buffer, really
+    let mut temp_query = ama_scraper::AmaQuery {
+        url_id: String::new(),
         question_text: None,
         answer_text: None,
     };
@@ -53,9 +55,9 @@ pub fn write_filetree() -> () {
                 break;
             }
             // create directories
-            root_path.push(ama_record.cc_name.clone());
-            root_path.push(ama_record.fan_name.clone());
-            fs::create_dir_all(root_path.clone());
+            root_path.push(&ama_record.cc_name);
+            root_path.push(&ama_record.fan_name);
+            fs::create_dir_all(&root_path);
             for fieldname in ["question_text", "answer_text", "url_id"] {
                 let text_fname = format!("{}.txt", fieldname);
                 root_path.push(text_fname);
@@ -65,7 +67,7 @@ pub fn write_filetree() -> () {
                     "url_id" => temp_query.url_id.clone(),
                     _ => panic!(""),
                 };
-                fs::write(root_path.clone(), contents);
+                fs::write(&root_path, contents);
                 root_path.pop();
             }
             // write to disk
