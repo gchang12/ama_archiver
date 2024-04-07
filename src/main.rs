@@ -1,18 +1,27 @@
+/*
 use std::fs;
 use std::path::Path;
+*/
 
+use ama_archiver::{compile_queries, compile_index};
+
+/*
 use ama_archiver::ama_indexer;
 use ama_archiver::ama_scraper;
+*/
 
+/*
 const LC_FNAME: &str = "link-compendium";
 const ODIR_NAME: &str = "output";
 const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
 const FIRST_CC_NAME: &str = "Daron Nefcy:";
 const DB_FNAME: &str = "ama_archive.db";
+*/
 
 fn main() {
 }
 
+/*
 fn compile_queries() -> () {
     // pseudo-constant
     let full_dbpath: &str = "output/ama_archive.db";
@@ -68,4 +77,4 @@ fn compile_index() -> () {
         Err(save_err) => eprintln!("Could not save to disk: {:?}", save_err),
     };
 }
-
+*/
