@@ -16,7 +16,7 @@
 // Insert code to prevent overwrite... if it's actually necessary to do so.
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 mod indexer;
 pub use crate::indexer::ama_indexer;
@@ -29,6 +29,47 @@ const ODIR_NAME: &str = "output";
 const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
 const FIRST_CC_NAME: &str = "Daron Nefcy:";
 const DB_FNAME: &str = "ama_archive.db";
+
+pub fn write_filetree() -> () {
+    let db_filename: String = format!("{}/{}", ODIR_NAME, DB_FNAME);
+    let ama_queries: Vec<ama_scraper::AmaQuery> = ama_scraper::load_ama_queries_from_db(db_filename.clone());
+    let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::load_ama_index(db_filename.as_str());
+    let mut url_id: String = String::new(); let mut temp_query = ama_scraper::AmaQuery { url_id: String::new(),
+        question_text: None,
+        answer_text: None,
+    };
+    let mut root_path = PathBuf::new();
+    root_path.push(ODIR_NAME);
+    for ama_record in ama_index {
+        // match url_id to ama_query
+        for ama_query in ama_queries.iter() {
+            if ama_record.url_id == ama_query.url_id {
+                temp_query = ama_scraper::AmaQuery {
+                    url_id: ama_query.url_id.clone(),
+                    question_text: (*ama_query).question_text.clone(),
+                    answer_text: (*ama_query).answer_text.clone(),
+                };
+                break;
+            }
+            // create directories
+            root_path.push(ama_record.cc_name.clone());
+            root_path.push(ama_record.fan_name.clone());
+            fs::create_dir_all(root_path.clone());
+            for fieldname in ["question_text", "answer_text", "url_id"] {
+                let text_fname = format!("{}.txt", fieldname);
+                root_path.push(text_fname);
+                let contents = match fieldname {
+                    "question_text" => temp_query.question_text.clone().unwrap(),
+                    "answer_text" => temp_query.answer_text.clone().unwrap(),
+                    "url_id" => temp_query.url_id.clone(),
+                    _ => panic!(""),
+                };
+                fs::write(root_path.clone(), contents);
+            }
+            // write to disk
+        }
+    }
+}
 
 
 pub fn compile_queries() -> () {
