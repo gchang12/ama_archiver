@@ -1,7 +1,6 @@
 use std::path::Path;
 use std::fs;
 
-#[allow(dead_code)]
 fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
     match fs::remove_file(&full_path) {
         Ok(()) => {
@@ -413,5 +412,3 @@ mod ama_indexer_tests {
     }
 
 }
-
-
