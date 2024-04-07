@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 */
 
-use ama_archiver::{compile_queries, compile_index};
+use ama_archiver::{compile_queries, compile_index, write_filetree};
 
 /*
 use ama_archiver::ama_indexer;
@@ -19,6 +19,7 @@ const DB_FNAME: &str = "ama_archive.db";
 */
 
 fn main() {
+    write_filetree();
 }
 
 /*

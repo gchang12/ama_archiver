@@ -40,6 +40,7 @@ pub fn write_filetree() -> () {
     };
     let mut root_path = PathBuf::new();
     root_path.push(ODIR_NAME);
+    root_path.push("ama_filetree");
     for ama_record in ama_index {
         // match url_id to ama_query
         for ama_query in ama_queries.iter() {
@@ -65,8 +66,11 @@ pub fn write_filetree() -> () {
                     _ => panic!(""),
                 };
                 fs::write(root_path.clone(), contents);
+                root_path.pop();
             }
             // write to disk
+            root_path.pop();
+            root_path.pop();
         }
     }
 }
