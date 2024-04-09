@@ -13,17 +13,17 @@ fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
 }
 
 
-//! This module contains functions that fetch and store queries from the source.
-//! - fetch_ama_query: Fetches text Q&A data from Reddit as text, and returns it as a dict[str, str].
-//! - fetch_ama_queries: Iterates over index, and fetches Q&A data for each entry in the index.
-//! - save_ama_query: Saves a given ama_query, provided it's got the right fields.
+/// This module contains functions that fetch and store queries from the source.
+/// - fetch_ama_query: Fetches text Q&A data from Reddit as text, and returns it as a dict[str, str].
+/// - fetch_ama_queries: Iterates over index, and fetches Q&A data for each entry in the index.
+/// - save_ama_query: Saves a given ama_query, provided it's got the right fields.
 pub mod ama_scraper {
     use scraper::{Html, Selector};
     use std::path::Path;
     use rusqlite;
     use scraper::ElementRef;
 
-    //! Contains results of fetching from source URLs
+    /// Contains results of fetching from source URLs
     #[derive(PartialEq)]
     #[derive(Debug)]
     pub struct AmaQuery {
@@ -32,7 +32,7 @@ pub mod ama_scraper {
         pub answer_text: Option<String>,
     }
 
-    //! Helper function to get desired text off page.
+    /// Helper function to get desired text off page.
     pub fn get_html_text(usertext_node: ElementRef) -> Option<String> {
         let mut buffer: String = String::new();
         for text in usertext_node.text() {
@@ -41,9 +41,9 @@ pub mod ama_scraper {
         Some(buffer)
     }
 
-    //! Fetches `question_text` and `answer_text` values for a given URL.
-    //! - url: source whence data is to be fetched.
-    //! - ama_query: dict to store fetched data. Initialize outside function.
+    /// Fetches `question_text` and `answer_text` values for a given URL.
+    /// - url: source whence data is to be fetched.
+    /// - ama_query: dict to store fetched data. Initialize outside function.
     pub fn fetch_ama_query(url: &str, ama_query: &mut AmaQuery) -> () {
         let request: ureq::Request = ureq::get(url);
         let raw_html: String = match request.call() {
@@ -62,7 +62,7 @@ pub mod ama_scraper {
         }
     }
 
-    //! Creates database file with specified filename, and initializes queries table.
+    /// Creates database file with specified filename, and initializes queries table.
     pub fn create_db(full_dbpath: &str) -> () {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         match cnxn.execute(
@@ -78,9 +78,9 @@ pub mod ama_scraper {
         };
     }
 
-    //! Creates 'ama_queries' table in `full_dbpath`, and saves `ama_query` into the table.
-    //! - ama_query: populated dict to be loaded into the database.
-    //! - full_dbpath: tells the function where the database file is.
+    /// Creates 'ama_queries' table in `full_dbpath`, and saves `ama_query` into the table.
+    /// - ama_query: populated dict to be loaded into the database.
+    /// - full_dbpath: tells the function where the database file is.
     pub fn save_ama_query_to_db(ama_query: AmaQuery, full_dbpath: impl AsRef<Path>) -> rusqlite::Result<usize> {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         // Begin data dump here.
@@ -96,8 +96,8 @@ pub mod ama_scraper {
         Ok(0)
     }
 
-    //! Loads 'ama_queries' table from `full_dbpath` into List[dict].
-    //! - full_dbpath: Tells function where to find `ama_queries`
+    /// Loads 'ama_queries' table from `full_dbpath` into List[dict].
+    /// - full_dbpath: Tells function where to find `ama_queries`
     pub fn load_ama_queries_from_db(full_dbpath: impl AsRef<Path>) -> Vec<AmaQuery> {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let mut stmt: rusqlite::Statement = cnxn.prepare(

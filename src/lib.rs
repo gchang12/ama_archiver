@@ -26,7 +26,7 @@ const FIRST_CC_NAME: &str = "Daron Nefcy:";
 const DB_FNAME: &str = "ama_archive.db";
 
 pub fn write_filetree() -> () {
-    /// Turns out that I didn't need an entire module for this after all.
+    // Turns out that I didn't need an entire module for this after all.
     let db_filename: String = format!("{}/{}", ODIR_NAME, DB_FNAME);
     let ama_queries: Vec<ama_scraper::AmaQuery> = ama_scraper::load_ama_queries_from_db(&db_filename);
     let ama_index: Vec<ama_indexer::AmaRecord> = ama_indexer::load_ama_index(&db_filename);
@@ -53,7 +53,10 @@ pub fn write_filetree() -> () {
             // create directories
             root_path.push(&ama_record.cc_name);
             root_path.push(&ama_record.fan_name);
-            fs::create_dir_all(&root_path);
+            match fs::create_dir_all(&root_path) {
+                Ok(_) => println!("Output directory created: {:?}", &root_path),
+                Err(_) => eprintln!("Output directory already exists: {:?}", &root_path),
+            };
             for fieldname in ["question_text", "answer_text", "url_id"] {
                 let text_fname = format!("{}.txt", fieldname);
                 root_path.push(text_fname);
@@ -63,7 +66,10 @@ pub fn write_filetree() -> () {
                     "url_id" => temp_query.url_id.clone(),
                     _ => panic!(""),
                 };
-                fs::write(&root_path, contents);
+                match fs::write(&root_path, contents) {
+                    Ok(_) => println!("Contents written to {:?}", &root_path),
+                    Err(_) => eprintln!("Contents not written to {:?}", &root_path),
+                };
                 root_path.pop();
             }
             // write to disk

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::fs;
 
-//! Tries to remove a file, and reports to stdout the results of the operation.
+/// Tries to remove a file, and reports to stdout the results of the operation.
 fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
     match fs::remove_file(&full_path) {
         Ok(()) => {
@@ -13,14 +13,14 @@ fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
     };
 }
 
-//! This module defines functions that will help compile and validate an index for the Q&A session exchanges.
-//! - fetch_raw_index: Fetches HTML from the link-compendium URL, and returns it as a str.
-//! - save_raw_index: Saves the raw index into the specified output file.
-//! - compile_ama_index: Compiles the Q&A index into a list of dict objects.
-//! - create_db: Creates a database file to store all the data in.
-//! - save_ama_index: Saves a Q&A index into a database file. 
-//! - get_urlid: Returns the url ID for a given URL.
-//! - get_url: Returns full URL for the given url_id (i.e. str that completes the url template, and transforms it into a functioning URL)
+/// This module defines functions that will help compile and validate an index for the Q&A session exchanges.
+/// - fetch_raw_index: Fetches HTML from the link-compendium URL, and returns it as a str.
+/// - save_raw_index: Saves the raw index into the specified output file.
+/// - compile_ama_index: Compiles the Q&A index into a list of dict objects.
+/// - create_db: Creates a database file to store all the data in.
+/// - save_ama_index: Saves a Q&A index into a database file. 
+/// - get_urlid: Returns the url ID for a given URL.
+/// - get_url: Returns full URL for the given url_id (i.e. str that completes the url template, and transforms it into a functioning URL)
 pub mod ama_indexer {
     use ureq;
     use ego_tree::NodeRef;
@@ -33,7 +33,7 @@ pub mod ama_indexer {
     // -2: '' -> {url_id}
     const URL_TEMPLATE: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3";
 
-    //! Contains fields to store data parsed from index.
+    /// Contains fields to store data parsed from index.
     #[derive(PartialEq)]
     #[derive(Debug)]
     pub struct AmaRecord {
@@ -42,8 +42,8 @@ pub mod ama_indexer {
         pub url_id: String, // (ElementRef::attr).to_string()
     }
 
-    //! Fetches HTML from specified URL, and returns it as a str-object.
-    //! - url: Source to get HTML from.
+    /// Fetches HTML from specified URL, and returns it as a str-object.
+    /// - url: Source to get HTML from.
     pub fn fetch_raw_index(url: &str) -> String {
         // use ureq to get text of Lc_URL
         // save text into html file in output
@@ -56,10 +56,10 @@ pub mod ama_indexer {
         raw_html
     }
 
-    //! Saves 'raw_index' str to the file './odir_path/ofname'.
-    //! - raw_index: Raw HTML as str.
-    //! - odir_name: Path of output directory.
-    //! - lc_fname: Name of file to save `raw_index` to.
+    /// Saves 'raw_index' str to the file './odir_path/ofname'.
+    /// - raw_index: Raw HTML as str.
+    /// - odir_name: Path of output directory.
+    /// - lc_fname: Name of file to save `raw_index` to.
     pub fn save_raw_index(raw_html: String, odir_name: &str, lc_fname: &str) -> () {
         // create 'output' directory
         // save 'raw_html' to {oDIR_NAME}/{lC_FNAME}.html
@@ -74,14 +74,14 @@ pub mod ama_indexer {
         };
     }
 
-    //! Compiles index := {cc_name: [name for name in fan_names]} from HTML of the form: <p><strong>cc_name1</strong></p>
-    //! <p><a href=url>fan_name1</a></p>
-    //! <p><a href=url>fan_name2</a></p>
-    //! <p><a href=url>fan_name3</a></p>
-    //! <hr />
-    //! <p><strong>cc_name2</strong></p>
-    //! - raw_index: Raw HTML as str.
-    //! - start_text: The text to search <strong> tags for.
+    /// Compiles index := {cc_name: [name for name in fan_names]} from HTML of the form: <p><strong>cc_name1</strong></p>
+    /// <p><a href=url>fan_name1</a></p>
+    /// <p><a href=url>fan_name2</a></p>
+    /// <p><a href=url>fan_name3</a></p>
+    /// <hr />
+    /// <p><strong>cc_name2</strong></p>
+    /// - raw_index: Raw HTML as str.
+    /// - start_text: The text to search <strong> tags for.
     pub fn compile_ama_index(raw_html: String, start_text: &str) -> Vec<AmaRecord> {
         // locate the starting node
         let parsed_html: Html = Html::parse_document(&raw_html);
@@ -159,8 +159,8 @@ pub mod ama_indexer {
     }
     */
 
-    //! Creates a database file with the argument as the filename, and initializes the
-    //! index table.
+    /// Creates a database file with the argument as the filename, and initializes the
+    /// index table.
     pub fn create_db(full_dbpath: &str) -> () {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         match cnxn.execute(
@@ -176,9 +176,9 @@ pub mod ama_indexer {
         };
     }
  
-    //! Saves ama_index := [{field1: value1, field2: value2, ...}] to full_dbpath in SQL format.
-    //! - ama_index: List of ama_index dict-records.
-    //! - full_dbpath: Tells function where to save `ama_index`
+    /// Saves ama_index := [{field1: value1, field2: value2, ...}] to full_dbpath in SQL format.
+    /// - ama_index: List of ama_index dict-records.
+    /// - full_dbpath: Tells function where to save `ama_index`
     pub fn save_ama_index(ama_index: Vec<AmaRecord>, full_dbpath: &str) -> rusqlite::Result<usize> {
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
         let ama_index_len: usize = ama_index.len();
@@ -196,8 +196,8 @@ pub mod ama_indexer {
         Ok(ama_index_len)
     }
 
-    //! Loads from `full_dbpath` the table `ama_index` as List[dict] object.
-    //! - full_dbpath: Tells function where to find `ama_index`
+    /// Loads from `full_dbpath` the table `ama_index` as List[dict] object.
+    /// - full_dbpath: Tells function where to find `ama_index`
     pub fn load_ama_index(full_dbpath: impl AsRef<Path>) -> Vec<AmaRecord> {
         let mut ama_index: Vec<AmaRecord> = Vec::new();
         let cnxn: rusqlite::Connection = rusqlite::Connection::open(full_dbpath).unwrap();
@@ -222,8 +222,8 @@ pub mod ama_indexer {
         ama_index
     }
 
-    //! Forms a complete old-Reddit URL from the url_id parameter, and returns it as a str-object.
-    //! - url_id: The part of the URL used to form a complete URL.
+    /// Forms a complete old-Reddit URL from the url_id parameter, and returns it as a str-object.
+    /// - url_id: The part of the URL used to form a complete URL.
     pub fn get_url(url_id: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
         let url_template: String = URL_TEMPLATE.to_string();
@@ -238,8 +238,8 @@ pub mod ama_indexer {
         url
     }
 
-    //! Extracts the URL id from a given URL string.
-    //! - url: URL whose url_id is to be extracted.
+    /// Extracts the URL id from a given URL string.
+    /// - url: URL whose url_id is to be extracted.
     pub fn get_urlid(url: String) -> String {
         // url_template = "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything//?context=3"
         let url_parts: Vec<&str> = url.split("/").collect();
