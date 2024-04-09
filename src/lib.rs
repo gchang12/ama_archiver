@@ -13,6 +13,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use rusqlite;
+
 mod indexer;
 pub use crate::indexer::ama_indexer;
 
@@ -24,6 +26,25 @@ const ODIR_NAME: &str = "output";
 const LC_URL: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
 const FIRST_CC_NAME: &str = "Daron Nefcy:";
 const DB_FNAME: &str = "ama_archive.db";
+
+pub fn fix_database() -> () {
+    // - UPDATE ama_index SET url_id='evw8g9o' WHERE fan_name='Joe_Zt' AND cc_name='Daron Nefcy';
+    // - UPDATE ama_index SET url_id='evwbgza' WHERE fan_name='sloppyjeaux' AND cc_name='Adam McArthur';
+    let db_filename: String = format!("{}/{}", ODIR_NAME, DB_FNAME);
+    let cnxn: rusqlite::Connection = rusqlite::Connection::open(db_filename).unwrap();
+    let fix_list: Vec<&str> = Vec::from(
+        [
+            "UPDATE ama_index SET url_id='evw8g9o' WHERE fan_name='Joe_Zt' AND cc_name='Daron Nefcy';",
+            "UPDATE ama_index SET url_id='evwbgza' WHERE fan_name='sloppyjeaux' AND cc_name='Adam McArthur';",
+        ]
+    );
+    for fix in fix_list {
+        match cnxn.execute(&fix, ()) {
+            Ok(_) => println!("{}", fix),
+            Err(_) => println!("Could not execute query."),
+        };
+    };
+}
 
 pub fn write_filetree() -> () {
     // Turns out that I didn't need an entire module for this after all.
