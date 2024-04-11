@@ -21,13 +21,13 @@ fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
 /// - save_ama_index: Saves a Q&A index into a database file. 
 /// - get_urlid: Returns the url ID for a given URL.
 /// - get_url: Returns full URL for the given url_id (i.e. str that completes the url template, and transforms it into a functioning URL)
-pub mod ama_indexer {
+//pub mod ama_indexer {
     use ureq;
     use ego_tree::NodeRef;
-    use std::fs;
+    //use std::fs;
     use scraper::{Html, Selector, ElementRef};
     use rusqlite;
-    use std::path::Path;
+    //use std::path::Path;
 
     // '/'-split list must be modified:
     // -2: '' -> {url_id}
@@ -248,12 +248,12 @@ pub mod ama_indexer {
         url_id
     }
 
-}
+//}
 
 
 #[cfg(test)]
 mod ama_indexer_tests {
-    use crate::ama_indexer;
+    use super;
     use std::fs;
     use super::remove_file;
 
@@ -276,7 +276,7 @@ mod ama_indexer_tests {
     fn test_get_url() {
         let url_id: String = "nyet".to_string();
         let expected: String = format!("{}/{}/{}", "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything", url_id, "?context=3");
-        let actual: String = ama_indexer::get_url(url_id);
+        let actual: String = super::get_url(url_id);
         assert_eq!(actual, expected);
     }
 
@@ -284,14 +284,14 @@ mod ama_indexer_tests {
     fn test_get_urlid() {
         let expected: String = "nyet".to_string();
         let url: String = format!("{}/{}/{}", "https://www.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything", expected, "?context=3");
-        let actual: String = ama_indexer::get_urlid(url);
+        let actual: String = super::get_urlid(url);
         assert_eq!(actual, expected);
     }
 
     #[test]
     fn test_fetch_raw_index() {
         let url: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/clnrdv/link_compendium_of_questions_and_answers_from_the/";
-        let raw_index: String = ama_indexer::fetch_raw_index(url);
+        let raw_index: String = super::fetch_raw_index(url);
         // Few tests to check that it contains some keywords.
         let keywords: Vec<&str> = Vec::from(
             [
@@ -307,7 +307,7 @@ mod ama_indexer_tests {
         }
     }
 
-    fn get_ama_index() -> Vec<ama_indexer::AmaRecord> {
+    fn get_ama_index() -> Vec<super::AmaRecord> {
         let index_tup: Vec<(&str, &str, &str)> = Vec::from(
             [
                 ("cc_name1", "fan_name1", "1"),
@@ -317,14 +317,14 @@ mod ama_indexer_tests {
                 ("cc_name2", "fan_name5", "4"),
             ]
         );
-        let mut expected: Vec<ama_indexer::AmaRecord> = Vec::new();
+        let mut expected: Vec<super::AmaRecord> = Vec::new();
         for tup in index_tup.into_iter().map(|field_tup| {
             let (cc_name, fan_name, url_id): (&str, &str, &str) = field_tup;
             (cc_name.to_string(), fan_name.to_string(), url_id.to_string())
         }
         ) {
             let (cc_name, fan_name, url_id): (String, String, String) = tup;
-            let ama_record = ama_indexer::AmaRecord {
+            let ama_record = super::AmaRecord {
                 cc_name,
                 fan_name,
                 url_id,
@@ -337,12 +337,12 @@ mod ama_indexer_tests {
     #[test]
     fn test_compile_ama_index() {
         // Decided not to rely on fetched data for test.
-        // let full_opath: String = format!("{}/{}.html", ama_indexer::oDIR_NAME, ama_indexer::lC_FNAME);
+        // let full_opath: String = format!("{}/{}.html", super::oDIR_NAME, super::lC_FNAME);
         /*fs::read_to_string(full_opath).unwrap();*/
-        let expected: Vec<ama_indexer::AmaRecord> = get_ama_index();
+        let expected: Vec<super::AmaRecord> = get_ama_index();
         let start_text: &str = "cc_name1:";
         let raw_index: &str = &get_raw_index();
-        let actual: Vec<ama_indexer::AmaRecord> = ama_indexer::compile_ama_index(raw_index.to_string(), start_text);
+        let actual: Vec<super::AmaRecord> = super::compile_ama_index(raw_index.to_string(), start_text);
         assert_eq!(actual, expected);
     }
 
@@ -352,7 +352,7 @@ mod ama_indexer_tests {
         let odir_name: &str = "mock-output";
         let lc_fname: &str = "test_save_raw_index-output";
         // Assert that saved text is the same as the loaded text.
-        let () = ama_indexer::save_raw_index(raw_index.to_string(), odir_name, lc_fname);
+        let () = super::save_raw_index(raw_index.to_string(), odir_name, lc_fname);
         let full_htmlpath: String = format!("{}/{}.html", odir_name, lc_fname);
         let actual: String = fs::read_to_string(&full_htmlpath).unwrap();
         let expected: String = raw_index.to_string();
@@ -364,11 +364,11 @@ mod ama_indexer_tests {
 
     #[test]
     fn test_save_ama_index() {
-        let ama_index: Vec<ama_indexer::AmaRecord> = get_ama_index();
+        let ama_index: Vec<super::AmaRecord> = get_ama_index();
         let full_dbpath: &str = "output/ama_index-save_test.db";
         // if full_dbpath.exists(): rm full_dbpath
-        let () = ama_indexer::create_db(full_dbpath);
-        let save_result: Result<usize, _> = ama_indexer::save_ama_index(ama_index, full_dbpath);
+        let () = super::create_db(full_dbpath);
+        let save_result: Result<usize, _> = super::save_ama_index(ama_index, full_dbpath);
         match save_result {
             Ok(numrows) => {
                 println!("{} rows written", numrows);
@@ -386,7 +386,7 @@ mod ama_indexer_tests {
             [],
             |row| {
                 Ok(
-                    ama_indexer::AmaRecord {
+                    super::AmaRecord {
                         url_id: row.get(0).unwrap(),
                         cc_name: row.get(1).unwrap(),
                         fan_name: row.get(2).unwrap(),
@@ -395,11 +395,11 @@ mod ama_indexer_tests {
             }
         ).unwrap();
         remove_file(full_dbpath);
-        let mut actual: Vec<ama_indexer::AmaRecord> = Vec::new();
+        let mut actual: Vec<super::AmaRecord> = Vec::new();
         for ama_record in ama_record_iter {
             actual.push(ama_record.unwrap());
         };
-        let expected: Vec<ama_indexer::AmaRecord> = get_ama_index();
+        let expected: Vec<super::AmaRecord> = get_ama_index();
         assert_eq!(actual, expected);
     }
 
@@ -426,7 +426,7 @@ mod ama_indexer_tests {
     #[test]
     fn test_load_ama_index() {
         let full_dbpath: &str = "output/ama_index-load_test.db";
-        let ama_index: Vec<ama_indexer::AmaRecord> = get_ama_index();
+        let ama_index: Vec<super::AmaRecord> = get_ama_index();
         // Insert into table, then test load.
         let cnxn: rusqlite::Connection = get_db_cnxn(full_dbpath);
         // Begin data dump here.
@@ -440,8 +440,8 @@ mod ama_indexer_tests {
                 )
             ).unwrap();
         };
-        let actual: Vec<ama_indexer::AmaRecord> = ama_indexer::load_ama_index(full_dbpath);
-        let expected: Vec<ama_indexer::AmaRecord> = get_ama_index();
+        let actual: Vec<super::AmaRecord> = super::load_ama_index(full_dbpath);
+        let expected: Vec<super::AmaRecord> = get_ama_index();
         assert_eq!(actual, expected);
         remove_file(full_dbpath);
     }

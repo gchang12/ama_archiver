@@ -15,11 +15,11 @@ use std::path::{Path, PathBuf};
 
 use rusqlite;
 
-mod indexer;
-pub use crate::indexer::ama_indexer;
+mod ama_indexer;
+//pub use crate::indexer::ama_indexer;
 
-mod scraper;
-pub use crate::scraper::ama_scraper;
+mod ama_scraper;
+//pub use crate::scraper::ama_scraper;
 
 const LC_FNAME: &str = "link-compendium";
 const ODIR_NAME: &str = "output";

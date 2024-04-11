@@ -17,9 +17,9 @@ fn remove_file(full_path: impl AsRef<Path> + std::fmt::Debug) -> () {
 /// - fetch_ama_query: Fetches text Q&A data from Reddit as text, and returns it as a dict[str, str].
 /// - fetch_ama_queries: Iterates over index, and fetches Q&A data for each entry in the index.
 /// - save_ama_query: Saves a given ama_query, provided it's got the right fields.
-pub mod ama_scraper {
+//pub mod ama_scraper {
     use scraper::{Html, Selector};
-    use std::path::Path;
+    //use std::path::Path;
     use rusqlite;
     use scraper::ElementRef;
 
@@ -122,11 +122,11 @@ pub mod ama_scraper {
         ama_queries
     }
 
-}
+//}
 
 #[cfg(test)]
 mod ama_scraper_tests {
-    use crate::ama_scraper;
+    use super;
     use super::remove_file;
     use rusqlite;
     use scraper::{Html, Selector};
@@ -143,7 +143,7 @@ mod ama_scraper_tests {
         let usertextbody_selector: Selector = Selector::parse(".usertext-body").unwrap();
         let mut actual: Option<String> = None;
         for usertext_node in parsed_html.select(&usertextbody_selector) {
-            actual = ama_scraper::get_html_text(usertext_node);
+            actual = super::get_html_text(usertext_node);
         }
         assert_eq!(actual, expected);
     }
@@ -151,13 +151,13 @@ mod ama_scraper_tests {
     #[test]
     fn test_fetch_ama_query() {
         let url: &str = "https://old.reddit.com/r/StarVStheForcesofEvil/comments/cll9u5/star_vs_the_forces_of_evil_ask_me_anything/evw3fne/?context=3";
-        let mut ama_query = ama_scraper::AmaQuery {
+        let mut ama_query = super::AmaQuery {
             url_id: "evw3fne".to_string(),
             question_text: None,
             answer_text: None,
         };
         while let None = ama_query.answer_text {
-            let () = ama_scraper::fetch_ama_query(url, &mut ama_query);
+            let () = super::fetch_ama_query(url, &mut ama_query);
         }
         if let None = ama_query.question_text {
             panic!("ama_query.question_text is unexpectedly None. Inspect!");
@@ -169,7 +169,7 @@ mod ama_scraper_tests {
 
     #[test]
     fn test_save_ama_query_to_db() {
-        let ama_query = ama_scraper::AmaQuery {
+        let ama_query = super::AmaQuery {
             url_id: "url_id".to_string(),
             question_text: Some("question_text".to_string()),
             answer_text: Some("answer_text".to_string()),
@@ -178,8 +178,8 @@ mod ama_scraper_tests {
         let filename: &str = "ama_query-save_test.db";
         let full_dbpath: String = format!("{}/{}", outdir, filename);
         // remove_file(&full_dbpath);
-        let () = ama_scraper::create_db(&full_dbpath);
-        match ama_scraper::save_ama_query_to_db(ama_query, &full_dbpath) {
+        let () = super::create_db(&full_dbpath);
+        match super::save_ama_query_to_db(ama_query, &full_dbpath) {
             Ok(_) => println!("AmaQuery successfully saved to database."),
             Err(sql_save_err) => panic!("Problem saving to database: {:?}", sql_save_err),
         };
@@ -192,7 +192,7 @@ mod ama_scraper_tests {
             [],
             |row| {
                 Ok(
-                    ama_scraper::AmaQuery {
+                    super::AmaQuery {
                         url_id: row.get(0).unwrap(),
                         question_text: Some(row.get(1).unwrap()),
                         answer_text: Some(row.get(2).unwrap()),
@@ -200,12 +200,12 @@ mod ama_scraper_tests {
                 )
             }
         ).unwrap();
-        let expected = ama_scraper::AmaQuery {
+        let expected = super::AmaQuery {
             url_id: "url_id".to_string(),
             question_text: Some("question_text".to_string()),
             answer_text: Some("answer_text".to_string()),
         };
-        let mut actual = ama_scraper::AmaQuery {
+        let mut actual = super::AmaQuery {
             url_id: String::new(),
             question_text: None,
             answer_text: None,
@@ -242,17 +242,17 @@ mod ama_scraper_tests {
         let full_dbpath: &str = "output/ama_query-load_test.db";
         let cnxn: rusqlite::Connection = get_db_cnxn(full_dbpath);
         // Begin data dump here.
-        let ama_query1 = ama_scraper::AmaQuery {
+        let ama_query1 = super::AmaQuery {
             url_id: "url_id".to_string(),
             question_text: Some("question_text".to_string()),
             answer_text: Some("answer_text".to_string()),
         };
-        let ama_query2 = ama_scraper::AmaQuery {
+        let ama_query2 = super::AmaQuery {
             url_id: "url_id2".to_string(),
             question_text: Some("question_text2".to_string()),
             answer_text: Some("answer_text2".to_string()),
         };
-        let expected: Vec<ama_scraper::AmaQuery> = Vec::from(
+        let expected: Vec<super::AmaQuery> = Vec::from(
             [
                 ama_query1,
                 ama_query2,
@@ -269,7 +269,7 @@ mod ama_scraper_tests {
                 )
             ).unwrap();
         }
-        let actual = ama_scraper::load_ama_queries_from_db(full_dbpath);
+        let actual = super::load_ama_queries_from_db(full_dbpath);
         assert_eq!(actual, expected);
         remove_file(full_dbpath);
     }
